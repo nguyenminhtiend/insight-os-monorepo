@@ -9,6 +9,7 @@ import { analyzeRoutes } from './routes/analyze.js';
 import { conversationsRoutes } from './routes/conversations.js';
 import { embeddingsRoutes } from './routes/embeddings.js';
 import { documentsRoutes } from './routes/documents.js';
+import { ragRoutes } from './routes/rag.js';
 import { closeDatabaseConnection } from './db/index.js';
 import { closeRedisConnection } from './lib/redis.js';
 
@@ -31,12 +32,13 @@ app.route('/analyze', analyzeRoutes);
 app.route('/conversations', conversationsRoutes);
 app.route('/embeddings', embeddingsRoutes);
 app.route('/documents', documentsRoutes);
+app.route('/rag', ragRoutes);
 
 // Root route
 app.get('/', (c) => {
   return c.json({
     name: 'InsightOS API',
-    version: '0.0.5',
+    version: '0.0.6',
     endpoints: {
       health: '/health',
       chat: '/chat',
@@ -48,7 +50,13 @@ app.get('/', (c) => {
       prompts: '/analyze/prompts',
       conversations: '/conversations',
       embeddings: '/embeddings',
-      documents: '/documents'
+      documents: '/documents',
+      ragQuery: '/rag/query',
+      ragQueryStream: '/rag/query/stream',
+      ragQueryMulti: '/rag/query/multi',
+      ragRetrieve: '/rag/retrieve',
+      ragCacheStats: '/rag/cache/stats',
+      ragCacheClear: '/rag/cache'
     }
   });
 });
