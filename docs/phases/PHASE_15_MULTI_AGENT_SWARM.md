@@ -176,9 +176,11 @@ export interface SwarmResult {
 async function runAgent(
   agent: Agent,
   input: string,
-  context: SwarmContext
-): Promise<{ output: string; handoff?: { targetAgent: string; context: string; data?: Record<string, unknown> } }> {
-
+  context: SwarmContext,
+): Promise<{
+  output: string;
+  handoff?: { targetAgent: string; context: string; data?: Record<string, unknown> };
+}> {
   const conversationHistory = context.messages
     .filter((m) => m.agent === agent.name || m.role === 'user')
     .map((m) => `${m.role}: ${m.content}`)
@@ -218,10 +220,7 @@ async function runAgent(
 /**
  * Run swarm orchestration
  */
-export async function runSwarm(
-  query: string,
-  maxSteps: number = 10
-): Promise<SwarmResult> {
+export async function runSwarm(query: string, maxSteps: number = 10): Promise<SwarmResult> {
   const context: SwarmContext = {
     messages: [{ agent: 'user', role: 'user', content: query, timestamp: new Date() }],
     data: {},
@@ -271,9 +270,7 @@ export async function runSwarm(
   }
 
   // Get final output from last agent response
-  const finalMessage = context.messages
-    .filter((m) => m.role === 'assistant')
-    .pop();
+  const finalMessage = context.messages.filter((m) => m.role === 'assistant').pop();
 
   return {
     finalOutput: finalMessage?.content || 'No output generated',
@@ -288,7 +285,7 @@ export async function runSwarm(
  */
 export async function* streamSwarm(
   query: string,
-  maxSteps: number = 10
+  maxSteps: number = 10,
 ): AsyncGenerator<{
   type: 'agent_start' | 'agent_output' | 'handoff' | 'complete';
   agent?: string;
@@ -440,8 +437,9 @@ curl -X POST http://localhost:3001/agents/swarm/stream \
 You've completed all 16 phases of the InsightOS implementation plan!
 
 ### What You've Built:
+
 - ✅ Monorepo with TurboRepo
-- ✅ Hono API + TanStack Start frontend
+- ✅ Hono API + Next.js frontend
 - ✅ LLM integration with Vercel AI SDK
 - ✅ Prompt templates and model routing
 - ✅ PostgreSQL + Drizzle ORM
@@ -459,10 +457,10 @@ You've completed all 16 phases of the InsightOS implementation plan!
 - ✅ Multi-agent swarm orchestration
 
 ### Next Steps:
+
 1. Add authentication (Auth.js)
 2. Build production UI components
 3. Deploy to production environment
 4. Add automated testing
 5. Implement guardrails
 6. Add fine-tuning pipeline
-

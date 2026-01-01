@@ -6,7 +6,7 @@
 
 ## Prerequisites
 
-- Phase 0 completed (monorepo with Hono + TanStack Start)
+- Phase 0 completed (monorepo with Hono + Next.js)
 - OpenAI API key
 
 ---
@@ -125,13 +125,13 @@ export interface ChatResponse {
 export const createResponse = <T>(data: T): ApiResponse<T> => ({
   success: true,
   data,
-  timestamp: new Date().toISOString()
+  timestamp: new Date().toISOString(),
 });
 
 export const createErrorResponse = (error: string): ApiResponse<never> => ({
   success: false,
   error,
-  timestamp: new Date().toISOString()
+  timestamp: new Date().toISOString(),
 });
 
 export const generateId = (): string => {
@@ -158,7 +158,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 
 // Initialize OpenAI provider
 export const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 // Default model configuration
@@ -172,14 +172,14 @@ Be concise, data-driven, and actionable in your responses.`,
 
   analyst: `You are a senior market analyst at InsightOS.
 Provide detailed analysis with specific data points and citations where possible.
-Structure your responses with clear sections and bullet points.`
+Structure your responses with clear sections and bullet points.`,
 };
 
 // Model options for different use cases
 export const MODELS = {
   fast: 'gpt-4o-mini', // Quick responses, lower cost
   smart: 'gpt-4o', // Complex analysis
-  reasoning: 'o1-mini' // Deep reasoning tasks
+  reasoning: 'o1-mini', // Deep reasoning tasks
 } as const;
 
 export type ModelType = keyof typeof MODELS;
@@ -204,8 +204,8 @@ app.use(
   '*',
   cors({
     origin: ['http://localhost:3000'],
-    credentials: true
-  })
+    credentials: true,
+  }),
 );
 
 // Routes
@@ -220,8 +220,8 @@ app.get('/', (c) => {
     endpoints: {
       health: '/health',
       chat: '/chat',
-      chatStream: '/chat/stream'
-    }
+      chatStream: '/chat/stream',
+    },
   });
 });
 
@@ -231,7 +231,7 @@ console.log(`🚀 InsightOS API running on http://localhost:${port}`);
 
 serve({
   fetch: app.fetch,
-  port
+  port,
 });
 
 export default app;
@@ -252,7 +252,7 @@ import {
   createResponse,
   createErrorResponse,
   generateId,
-  type ChatRequest
+  type ChatRequest,
 } from '@insight-os/shared';
 
 export const chatRoutes = new Hono();
@@ -275,8 +275,8 @@ chatRoutes.post('/', async (c) => {
       system: SYSTEM_PROMPTS.default,
       messages: messages.map((m) => ({
         role: m.role as 'user' | 'assistant',
-        content: m.content
-      }))
+        content: m.content,
+      })),
     });
 
     return c.json(
@@ -286,20 +286,20 @@ chatRoutes.post('/', async (c) => {
           id: generateId(),
           role: 'assistant' as const,
           content: result.text,
-          createdAt: new Date()
+          createdAt: new Date(),
         },
         usage: {
           promptTokens: result.usage.promptTokens,
           completionTokens: result.usage.completionTokens,
-          totalTokens: result.usage.totalTokens
-        }
-      })
+          totalTokens: result.usage.totalTokens,
+        },
+      }),
     );
   } catch (error) {
     console.error('Chat error:', error);
     return c.json(
       createErrorResponse(error instanceof Error ? error.message : 'Unknown error'),
-      500
+      500,
     );
   }
 });
@@ -322,8 +322,8 @@ chatRoutes.post('/stream', async (c) => {
       system: SYSTEM_PROMPTS.default,
       messages: messages.map((m) => ({
         role: m.role as 'user' | 'assistant',
-        content: m.content
-      }))
+        content: m.content,
+      })),
     });
 
     // Return streaming response
@@ -344,7 +344,7 @@ chatRoutes.post('/stream', async (c) => {
     console.error('Stream error:', error);
     return c.json(
       createErrorResponse(error instanceof Error ? error.message : 'Unknown error'),
-      500
+      500,
     );
   }
 });
@@ -359,10 +359,10 @@ chatRoutes.get('/models', (c) => {
       models: Object.entries(MODELS).map(([key, value]) => ({
         id: key,
         name: value,
-        description: getModelDescription(key as ModelType)
+        description: getModelDescription(key as ModelType),
       })),
-      default: DEFAULT_MODEL
-    })
+      default: DEFAULT_MODEL,
+    }),
   );
 });
 
@@ -416,7 +416,7 @@ export function Chat() {
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: input.trim()
+      content: input.trim(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -434,9 +434,9 @@ export function Chat() {
         body: JSON.stringify({
           messages: [...messages, userMessage].map((m) => ({
             role: m.role,
-            content: m.content
-          }))
-        })
+            content: m.content,
+          })),
+        }),
       });
 
       if (!response.ok) throw new Error('Failed to get response');
@@ -463,8 +463,8 @@ export function Chat() {
               if (parsed.content) {
                 setMessages((prev) =>
                   prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: m.content + parsed.content } : m
-                  )
+                    m.id === assistantId ? { ...m, content: m.content + parsed.content } : m,
+                  ),
                 );
               }
             } catch {
@@ -479,8 +479,8 @@ export function Chat() {
         prev.map((m) =>
           m.id === assistantId
             ? { ...m, content: '❌ Error: Failed to get response. Is the API running?' }
-            : m
-        )
+            : m,
+        ),
       );
     } finally {
       setIsLoading(false);
@@ -526,7 +526,7 @@ export function Chat() {
             key={message.id}
             style={{
               ...styles.message,
-              ...(message.role === 'user' ? styles.userMessage : styles.assistantMessage)
+              ...(message.role === 'user' ? styles.userMessage : styles.assistantMessage),
             }}
           >
             <div style={styles.messageRole}>
@@ -553,7 +553,7 @@ export function Chat() {
           type="submit"
           style={{
             ...styles.button,
-            ...(isLoading ? styles.buttonDisabled : {})
+            ...(isLoading ? styles.buttonDisabled : {}),
           }}
           disabled={isLoading}
         >
@@ -572,7 +572,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#0f0f23',
     borderRadius: '16px',
     border: '1px solid #333',
-    overflow: 'hidden'
+    overflow: 'hidden',
   },
   header: {
     display: 'flex',
@@ -580,13 +580,13 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     padding: '16px 20px',
     borderBottom: '1px solid #333',
-    background: '#1a1a3e'
+    background: '#1a1a3e',
   },
   headerTitle: {
     margin: 0,
     fontSize: '1rem',
     fontWeight: 600,
-    color: '#fff'
+    color: '#fff',
   },
   headerBadge: {
     fontSize: '0.75rem',
@@ -594,7 +594,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#4ade80',
     color: '#000',
     borderRadius: '4px',
-    fontWeight: 600
+    fontWeight: 600,
   },
   messages: {
     flex: 1,
@@ -602,7 +602,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '20px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px'
+    gap: '16px',
   },
   empty: {
     display: 'flex',
@@ -611,14 +611,14 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     height: '100%',
     color: '#888',
-    textAlign: 'center'
+    textAlign: 'center',
   },
   suggestions: {
     display: 'flex',
     gap: '8px',
     marginTop: '16px',
     flexWrap: 'wrap',
-    justifyContent: 'center'
+    justifyContent: 'center',
   },
   suggestion: {
     padding: '8px 16px',
@@ -628,43 +628,43 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#888',
     cursor: 'pointer',
     fontSize: '0.875rem',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s',
   },
   message: {
     padding: '12px 16px',
     borderRadius: '12px',
-    maxWidth: '85%'
+    maxWidth: '85%',
   },
   userMessage: {
     alignSelf: 'flex-end',
     background: '#3b82f6',
-    color: '#fff'
+    color: '#fff',
   },
   assistantMessage: {
     alignSelf: 'flex-start',
     background: '#1a1a3e',
     color: '#fff',
-    border: '1px solid #333'
+    border: '1px solid #333',
   },
   messageRole: {
     fontSize: '0.75rem',
     marginBottom: '4px',
-    opacity: 0.7
+    opacity: 0.7,
   },
   messageContent: {
     lineHeight: 1.5,
-    whiteSpace: 'pre-wrap'
+    whiteSpace: 'pre-wrap',
   },
   typing: {
     color: '#888',
-    fontStyle: 'italic'
+    fontStyle: 'italic',
   },
   form: {
     display: 'flex',
     gap: '12px',
     padding: '16px 20px',
     borderTop: '1px solid #333',
-    background: '#1a1a3e'
+    background: '#1a1a3e',
   },
   input: {
     flex: 1,
@@ -674,7 +674,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '8px',
     color: '#fff',
     fontSize: '1rem',
-    outline: 'none'
+    outline: 'none',
   },
   button: {
     padding: '12px 20px',
@@ -684,27 +684,24 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#fff',
     fontSize: '1.25rem',
     cursor: 'pointer',
-    transition: 'background 0.2s'
+    transition: 'background 0.2s',
   },
   buttonDisabled: {
     background: '#333',
-    cursor: 'not-allowed'
-  }
+    cursor: 'not-allowed',
+  },
 };
 ```
 
 **5.2 Update `apps/web/app/routes/index.tsx`:**
 
 ```tsx
-import { createFileRoute } from '@tanstack/react-router';
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Chat } from '../components/Chat';
 
-export const Route = createFileRoute('/')({
-  component: Home
-});
-
-function Home() {
+export default function Home() {
   const [health, setHealth] = useState<{
     status: string;
     version: string;
@@ -751,47 +748,47 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-    fontFamily: 'system-ui, -apple-system, sans-serif'
+    fontFamily: 'system-ui, -apple-system, sans-serif',
   },
   header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '16px 32px',
-    borderBottom: '1px solid #333'
+    borderBottom: '1px solid #333',
   },
   logo: {
     fontSize: '1.5rem',
     fontWeight: 700,
     color: '#fff',
-    margin: 0
+    margin: 0,
   },
   status: {
-    fontSize: '0.875rem'
+    fontSize: '0.875rem',
   },
   statusOnline: {
-    color: '#4ade80'
+    color: '#4ade80',
   },
   statusOffline: {
-    color: '#ef4444'
+    color: '#ef4444',
   },
   statusLoading: {
-    color: '#888'
+    color: '#888',
   },
   main: {
     flex: 1,
     padding: '32px',
     maxWidth: '800px',
     width: '100%',
-    margin: '0 auto'
+    margin: '0 auto',
   },
   footer: {
     padding: '16px 32px',
     borderTop: '1px solid #333',
     textAlign: 'center',
     color: '#4ade80',
-    fontSize: '0.875rem'
-  }
+    fontSize: '0.875rem',
+  },
 };
 ```
 

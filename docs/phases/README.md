@@ -6,24 +6,24 @@ A progressive, 16-phase implementation plan for building a production-grade AI-p
 
 ## 📋 Quick Reference
 
-| Phase                                  | Title               | Key Features                    | Est. Time |
-| -------------------------------------- | ------------------- | ------------------------------- | --------- |
-| [0](./PHASE_00_MONOREPO_BOOTSTRAP.md)  | Monorepo Bootstrap  | TurboRepo, Hono, TanStack Start | 2-3 hrs   |
-| [1](./PHASE_01_LLM_BASICS.md)          | LLM Basics          | Vercel AI SDK, streaming chat   | 2-3 hrs   |
-| [2](./PHASE_02_LLM_ADVANCED.md)        | LLM Advanced        | Prompts, router, JSON mode      | 3-4 hrs   |
-| [3](./PHASE_03_DATABASE_FOUNDATION.md) | Database Foundation | PostgreSQL, Drizzle, Redis      | 2-3 hrs   |
-| [4](./PHASE_04_VECTOR_SEARCH.md)       | Vector Search       | pgvector, embeddings            | 2-3 hrs   |
-| [5](./PHASE_05_RAG_INGESTION.md)       | RAG Ingestion       | Chunking, document processing   | 3-4 hrs   |
-| [6](./PHASE_06_RAG_RETRIEVAL.md)       | RAG Retrieval       | Hybrid search, semantic cache   | 3-4 hrs   |
-| [7](./PHASE_07_RAG_ADVANCED.md)        | RAG Advanced        | Reranking, query reformulation  | 3-4 hrs   |
-| [8](./PHASE_08_AGENTS_INTRO.md)        | Agents Intro        | LangGraph, tools                | 3-4 hrs   |
-| [9](./PHASE_09_AGENT_WORKFLOWS.md)     | Agent Workflows     | Plan→Act→Reflect cycles         | 4-5 hrs   |
-| [10](./PHASE_10_HUMAN_IN_THE_LOOP.md)  | Human-in-the-Loop   | Approvals, checkpoints          | 3-4 hrs   |
-| [11](./PHASE_11_MEMORY_SYSTEM.md)      | Memory System       | Multi-tier memory               | 4-5 hrs   |
-| [12](./PHASE_12_BACKGROUND_JOBS.md)    | Background Jobs     | BullMQ queues                   | 2-3 hrs   |
-| [13](./PHASE_13_OBSERVABILITY.md)      | Observability       | Langfuse tracing                | 2-3 hrs   |
-| [14](./PHASE_14_GRAPHRAG.md)           | GraphRAG            | Neo4j knowledge graphs          | 4-5 hrs   |
-| [15](./PHASE_15_MULTI_AGENT_SWARM.md)  | Multi-Agent Swarm   | Agent handoffs, orchestration   | 4-5 hrs   |
+| Phase                                  | Title               | Key Features                   | Est. Time |
+| -------------------------------------- | ------------------- | ------------------------------ | --------- |
+| [0](./PHASE_00_MONOREPO_BOOTSTRAP.md)  | Monorepo Bootstrap  | TurboRepo, Hono, Next.js       | 2-3 hrs   |
+| [1](./PHASE_01_LLM_BASICS.md)          | LLM Basics          | Vercel AI SDK, streaming chat  | 2-3 hrs   |
+| [2](./PHASE_02_LLM_ADVANCED.md)        | LLM Advanced        | Prompts, router, JSON mode     | 3-4 hrs   |
+| [3](./PHASE_03_DATABASE_FOUNDATION.md) | Database Foundation | PostgreSQL, Drizzle, Redis     | 2-3 hrs   |
+| [4](./PHASE_04_VECTOR_SEARCH.md)       | Vector Search       | pgvector, embeddings           | 2-3 hrs   |
+| [5](./PHASE_05_RAG_INGESTION.md)       | RAG Ingestion       | Chunking, document processing  | 3-4 hrs   |
+| [6](./PHASE_06_RAG_RETRIEVAL.md)       | RAG Retrieval       | Hybrid search, semantic cache  | 3-4 hrs   |
+| [7](./PHASE_07_RAG_ADVANCED.md)        | RAG Advanced        | Reranking, query reformulation | 3-4 hrs   |
+| [8](./PHASE_08_AGENTS_INTRO.md)        | Agents Intro        | LangGraph, tools               | 3-4 hrs   |
+| [9](./PHASE_09_AGENT_WORKFLOWS.md)     | Agent Workflows     | Plan→Act→Reflect cycles        | 4-5 hrs   |
+| [10](./PHASE_10_HUMAN_IN_THE_LOOP.md)  | Human-in-the-Loop   | Approvals, checkpoints         | 3-4 hrs   |
+| [11](./PHASE_11_MEMORY_SYSTEM.md)      | Memory System       | Multi-tier memory              | 4-5 hrs   |
+| [12](./PHASE_12_BACKGROUND_JOBS.md)    | Background Jobs     | BullMQ queues                  | 2-3 hrs   |
+| [13](./PHASE_13_OBSERVABILITY.md)      | Observability       | Langfuse tracing               | 2-3 hrs   |
+| [14](./PHASE_14_GRAPHRAG.md)           | GraphRAG            | Neo4j knowledge graphs         | 4-5 hrs   |
+| [15](./PHASE_15_MULTI_AGENT_SWARM.md)  | Multi-Agent Swarm   | Agent handoffs, orchestration  | 4-5 hrs   |
 
 **Total Estimated Time:** ~50-60 hours
 
@@ -35,7 +35,7 @@ A progressive, 16-phase implementation plan for building a production-grade AI-p
 ┌──────────────────────────────────────────────────────────────────┐
 │                        InsightOS Architecture                     │
 ├──────────────────────────────────────────────────────────────────┤
-│  Frontend (TanStack Start)                                        │
+│  Frontend (Next.js)                                               │
 │  ├── Chat Interface                                               │
 │  ├── Document Upload                                              │
 │  └── Analysis Dashboard                                           │
@@ -74,7 +74,7 @@ A progressive, 16-phase implementation plan for building a production-grade AI-p
 | ------------------- | -------------------- | ---------------- |
 | **Monorepo**        | TurboRepo + pnpm     | Phase 0          |
 | **Backend**         | Hono                 | Phase 0          |
-| **Frontend**        | TanStack Start       | Phase 0          |
+| **Frontend**        | Next.js              | Phase 0          |
 | **LLM SDK**         | Vercel AI SDK        | Phase 1          |
 | **Agent Framework** | LangGraph.js         | Phase 8          |
 | **Database**        | PostgreSQL + Drizzle | Phase 3          |
@@ -93,7 +93,7 @@ A progressive, 16-phase implementation plan for building a production-grade AI-p
 /insight-os-monorepo
 ├── apps/
 │   ├── api/              # Hono API server
-│   ├── web/              # TanStack Start frontend
+│   ├── web/              # Next.js frontend
 │   └── worker/           # BullMQ workers
 │
 ├── packages/
@@ -218,7 +218,7 @@ graph TD
 - [LangGraph.js Docs](https://langchain-ai.github.io/langgraphjs/)
 - [Drizzle ORM Docs](https://orm.drizzle.team/)
 - [Hono Docs](https://hono.dev/)
-- [TanStack Start Docs](https://tanstack.com/start)
+- [Next.js Docs](https://nextjs.org/docs)
 - [Langfuse Docs](https://langfuse.com/docs)
 
 ---

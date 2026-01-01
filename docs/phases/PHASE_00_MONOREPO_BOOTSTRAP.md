@@ -1,6 +1,6 @@
 # Phase 0: Monorepo Bootstrap
 
-> **Goal:** Set up the foundational monorepo structure with TurboRepo, pnpm workspaces, and scaffold the core apps (Hono API + TanStack Start frontend).
+> **Goal:** Set up the foundational monorepo structure with TurboRepo, pnpm workspaces, and scaffold the core apps (Hono API + Next.js frontend).
 
 ---
 
@@ -45,13 +45,13 @@ This will automatically install Node.js 24.12.0 and pnpm 10.26.2 as specified in
 
 ## Tech Stack for This Phase
 
-| Tool           | Purpose                                |
-| -------------- | -------------------------------------- |
-| TurboRepo      | Monorepo build orchestration & caching |
-| pnpm           | Package manager with workspaces        |
-| Hono           | Backend API framework                  |
-| TanStack Start | Frontend framework                     |
-| TypeScript     | Type safety across all packages        |
+| Tool       | Purpose                                |
+| ---------- | -------------------------------------- |
+| TurboRepo  | Monorepo build orchestration & caching |
+| pnpm       | Package manager with workspaces        |
+| Hono       | Backend API framework                  |
+| Next.js    | React framework with App Router        |
+| TypeScript | Type safety across all packages        |
 
 ---
 
@@ -68,13 +68,12 @@ This will automatically install Node.js 24.12.0 and pnpm 10.26.2 as specified in
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   │
-│   └── web/                    # TanStack Start frontend
+│   └── web/                    # Next.js frontend
 │       ├── app/
-│       │   ├── routes/
-│       │   │   └── index.tsx   # Home page
-│       │   ├── client.tsx
-│       │   ├── router.tsx
-│       │   └── routeTree.gen.ts
+│       │   ├── layout.tsx      # Root layout
+│       │   └── page.tsx        # Home page
+│       ├── next.config.ts
+│       ├── tailwind.config.ts
 │       ├── package.json
 │       └── tsconfig.json
 │
@@ -147,7 +146,7 @@ packages:
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".output/**"]
+      "outputs": ["dist/**", ".next/**"]
     },
     "dev": {
       "cache": false,
@@ -369,7 +368,7 @@ healthRoutes.get('/live', (c) => {
 
 ---
 
-### Step 4: Create TanStack Start Frontend
+### Step 4: Create Next.js Frontend
 
 **4.1 Create `apps/web/package.json`:**
 
@@ -378,28 +377,26 @@ healthRoutes.get('/live', (c) => {
   "name": "@insight-os/web",
   "version": "0.0.1",
   "private": true,
-  "type": "module",
   "scripts": {
-    "dev": "vinxi dev --port 3000",
-    "build": "vinxi build",
-    "start": "vinxi start",
-    "lint": "tsc --noEmit"
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "@tanstack/react-router": "latest",
-    "@tanstack/start": "latest",
+    "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "vinxi": "latest",
     "@insight-os/shared": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "@vitejs/plugin-react": "latest",
     "typescript": "latest",
     "tailwindcss": "latest",
-    "@tailwindcss/vite": "latest"
+    "postcss": "latest",
+    "autoprefixer": "latest"
   }
 }
 ```
@@ -410,268 +407,159 @@ healthRoutes.get('/live', (c) => {
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
-    "moduleDetection": "force",
-    "noEmit": true
+    "noEmit": true,
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./app/*"]
+    }
   },
-  "include": ["app/**/*", "*.config.ts"]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
 }
 ```
 
-**4.3 Create `apps/web/app.config.ts`:**
+**4.3 Create `apps/web/next.config.ts`:**
 
 ```typescript
-import { defineConfig } from '@tanstack/start/config';
-import tailwindcss from '@tailwindcss/vite';
+import type { NextConfig } from 'next';
 
-export default defineConfig({
-  vite: {
-    plugins: [tailwindcss()],
+const config: NextConfig = {
+  transpilePackages: ['@insight-os/shared'],
+};
+
+export default config;
+```
+
+**4.4 Create `apps/web/tailwind.config.ts`:**
+
+```typescript
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  content: ['./app/**/*.{js,ts,jsx,tsx,mdx}'],
+  theme: {
+    extend: {},
   },
-  server: {
-    preset: 'node-server',
+  plugins: [],
+};
+
+export default config;
+```
+
+**4.5 Create `apps/web/postcss.config.mjs`:**
+
+```javascript
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
   },
-});
+};
 ```
 
-**4.4 Create `apps/web/app/client.tsx`:**
+**4.6 Create `apps/web/app/globals.css`:**
 
-```tsx
-import { hydrateRoot } from 'react-dom/client';
-import { StartClient } from '@tanstack/start';
-import { createRouter } from './router';
-
-const router = createRouter();
-
-hydrateRoot(document, <StartClient router={router} />);
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 ```
 
-**4.5 Create `apps/web/app/ssr.tsx`:**
+**4.7 Create `apps/web/app/layout.tsx`:**
 
 ```tsx
-import { createStartHandler, defaultStreamHandler } from '@tanstack/start/server';
-import { getRouterManifest } from '@tanstack/start/router-manifest';
-import { createRouter } from './router';
+import type { Metadata } from 'next';
+import './globals.css';
 
-export default createStartHandler({
-  createRouter,
-  getRouterManifest,
-})(defaultStreamHandler);
-```
+export const metadata: Metadata = {
+  title: 'InsightOS',
+  description: 'Strategic Market Intelligence Platform',
+};
 
-**4.6 Create `apps/web/app/router.tsx`:**
-
-```tsx
-import { createRouter as createTanStackRouter } from '@tanstack/react-router';
-import { routeTree } from './routeTree.gen';
-
-export function createRouter() {
-  const router = createTanStackRouter({
-    routeTree,
-    scrollRestoration: true,
-  });
-
-  return router;
-}
-
-declare module '@tanstack/react-router' {
-  interface Register {
-    router: ReturnType<typeof createRouter>;
-  }
-}
-```
-
-**4.7 Create `apps/web/app/routes/__root.tsx`:**
-
-```tsx
-import { Outlet, ScrollRestoration, createRootRoute } from '@tanstack/react-router';
-import { Meta, Scripts } from '@tanstack/start';
-import type { ReactNode } from 'react';
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'InsightOS' },
-    ],
-  }),
-  component: RootComponent,
-});
-
-function RootComponent() {
-  return (
-    <RootDocument>
-      <Outlet />
-    </RootDocument>
-  );
-}
-
-function RootDocument({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        <Meta />
-      </head>
-      <body>
-        {children}
-        <ScrollRestoration />
-        <Scripts />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
 ```
 
-**4.8 Create `apps/web/app/routes/index.tsx`:**
+**4.8 Create `apps/web/app/page.tsx`:**
 
 ```tsx
-import { createFileRoute } from '@tanstack/react-router';
+'use client';
+
 import { useState, useEffect } from 'react';
 
-export const Route = createFileRoute('/')({
-  component: Home
-});
+interface HealthData {
+  status: string;
+  version: string;
+  uptime: number;
+}
 
-function Home() {
-  const [health, setHealth] = useState<{
-    status: string;
-    version: string;
-    uptime: number;
-  } | null>(null);
+export default function Home() {
+  const [health, setHealth] = useState<HealthData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('http://localhost:3001/health')
       .then((res) => res.json())
-      .then((data) => setHealth(data.data));
+      .then((data) => setHealth(data.data))
       .catch((err) => setError(err.message));
   }, []);
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>🧠 InsightOS</h1>
-        <p style={styles.subtitle}>Strategic Market Intelligence Platform</p>
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
+      <div className="bg-slate-950 rounded-2xl p-12 shadow-2xl border border-slate-800 max-w-md w-11/12">
+        <h1 className="text-4xl font-bold text-white text-center mb-2">🧠 InsightOS</h1>
+        <p className="text-slate-400 text-center mb-6">Strategic Market Intelligence Platform</p>
 
-        <div style={styles.divider} />
+        <div className="h-px bg-slate-800 my-6" />
 
-        <h2 style={styles.sectionTitle}>API Status</h2>
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
+          API Status
+        </h2>
+
         {error ? (
-          <div style={styles.error}>❌ API Offline: {error}</div>
+          <div className="p-4 bg-red-950 border border-red-500 rounded-lg text-red-200">
+            ❌ API Offline: {error}
+          </div>
         ) : health ? (
-          <div style={styles.status}>
-            <div style={styles.statusItem}>
-              <span style={styles.statusLabel}>Status:</span>
-              <span style={styles.statusValue}>{health.status} ✅</span>
+          <div className="space-y-3">
+            <div className="flex justify-between p-3 bg-slate-900 rounded-lg">
+              <span className="text-slate-400">Status:</span>
+              <span className="text-green-400 font-semibold">{health.status} ✅</span>
             </div>
-            <div style={styles.statusItem}>
-              <span style={styles.statusLabel}>Version:</span>
-              <span style={styles.statusValue}>{health.version}</span>
+            <div className="flex justify-between p-3 bg-slate-900 rounded-lg">
+              <span className="text-slate-400">Version:</span>
+              <span className="text-green-400 font-semibold">{health.version}</span>
             </div>
-            <div style={styles.statusItem}>
-              <span style={styles.statusLabel}>Uptime:</span>
-              <span style={styles.statusValue}>{health.uptime}s</span>
+            <div className="flex justify-between p-3 bg-slate-900 rounded-lg">
+              <span className="text-slate-400">Uptime:</span>
+              <span className="text-green-400 font-semibold">{health.uptime}s</span>
             </div>
           </div>
         ) : (
-          <div style={styles.loading}>Loading...</div>
+          <div className="p-4 bg-slate-900 rounded-lg text-slate-400 text-center">Loading...</div>
         )}
 
-        <div style={styles.divider} />
+        <div className="h-px bg-slate-800 my-6" />
 
-        <div style={styles.footer}>
+        <div className="text-center text-green-400 text-sm">
           <p>Phase 0: Monorepo Bootstrap ✓</p>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-    fontFamily: 'system-ui, -apple-system, sans-serif'
-  },
-  card: {
-    background: '#0f0f23',
-    borderRadius: '16px',
-    padding: '48px',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-    border: '1px solid #333',
-    maxWidth: '480px',
-    width: '90%'
-  },
-  title: {
-    fontSize: '2.5rem',
-    fontWeight: 700,
-    color: '#fff',
-    margin: 0,
-    textAlign: 'center'
-  },
-  subtitle: {
-    fontSize: '1rem',
-    color: '#888',
-    margin: '8px 0 0 0',
-    textAlign: 'center'
-  },
-  divider: {
-    height: '1px',
-    background: '#333',
-    margin: '24px 0'
-  },
-  sectionTitle: {
-    fontSize: '1rem',
-    fontWeight: 600,
-    color: '#888',
-    margin: '0 0 16px 0',
-    textTransform: 'uppercase',
-    letterSpacing: '1px'
-  },
-  status: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px'
-  },
-  statusItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: '12px 16px',
-    background: '#1a1a3e',
-    borderRadius: '8px'
-  },
-  statusLabel: {
-    color: '#888'
-  },
-  statusValue: {
-    color: '#4ade80',
-    fontWeight: 600
-  },
-  error: {
-    padding: '16px',
-    background: '#2d1f1f',
-    border: '1px solid #ef4444',
-    borderRadius: '8px',
-    color: '#fca5a5'
-  },
-  loading: {
-    padding: '16px',
-    background: '#1a1a3e',
-    borderRadius: '8px',
-    color: '#888',
-    textAlign: 'center'
-  },
-  footer: {
-    textAlign: 'center',
-    color: '#4ade80',
-    fontSize: '0.875rem'
-  }
-};
 ```
 
 ---
@@ -724,6 +612,6 @@ pnpm dev
 
 **Solution:** Kill existing processes or change ports in respective configs.
 
-### Issue: TanStack Start route generation
+### Issue: Next.js build errors
 
-**Solution:** Routes are auto-generated. If missing, restart dev server.
+**Solution:** Clear `.next` folder and rebuild: `rm -rf .next && pnpm dev`
