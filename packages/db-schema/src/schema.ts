@@ -7,8 +7,23 @@ import {
   integer,
   boolean,
   index,
-  pgEnum
+  pgEnum,
+  customType
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+
+// Custom vector type for pgvector
+const vectorType = customType<{ data: number[]; driverData: string }>({
+  dataType() {
+    return 'vector(1536)'; // OpenAI embedding dimension
+  },
+  toDriver(value: number[]): string {
+    return JSON.stringify(value);
+  },
+  fromDriver(value: string): number[] {
+    return JSON.parse(value);
+  }
+});
 
 // Enums
 export const messageRoleEnum = pgEnum('message_role', ['user', 'assistant', 'system']);
@@ -16,6 +31,12 @@ export const conversationStatusEnum = pgEnum('conversation_status', [
   'active',
   'archived',
   'deleted'
+]);
+export const documentStatusEnum = pgEnum('document_status', [
+  'pending',
+  'processing',
+  'completed',
+  'failed'
 ]);
 
 // Conversations table
@@ -86,6 +107,59 @@ export const analysisResults = pgTable(
   ]
 );
 
+// Documents table (for RAG source documents)
+export const documents = pgTable(
+  'documents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    type: text('type').notNull(), // 'pdf', 'txt', 'md', 'url'
+    source: text('source'), // Original file path or URL
+    content: text('content'), // Full text content
+    status: documentStatusEnum('status').default('pending').notNull(),
+    metadata: jsonb('metadata').$type<{
+      size?: number;
+      pageCount?: number;
+      wordCount?: number;
+      language?: string;
+      [key: string]: unknown;
+    }>(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull()
+  },
+  (table) => [
+    index('documents_status_idx').on(table.status),
+    index('documents_type_idx').on(table.type)
+  ]
+);
+
+// Document chunks table (for chunked content with embeddings)
+export const documentChunks = pgTable(
+  'document_chunks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    documentId: uuid('document_id')
+      .references(() => documents.id, { onDelete: 'cascade' })
+      .notNull(),
+    chunkIndex: integer('chunk_index').notNull(),
+    content: text('content').notNull(),
+    embedding: vectorType('embedding'), // 1536-dim OpenAI embeddings
+    metadata: jsonb('metadata').$type<{
+      startChar?: number;
+      endChar?: number;
+      pageNumber?: number;
+      section?: string;
+      [key: string]: unknown;
+    }>(),
+    createdAt: timestamp('created_at').defaultNow().notNull()
+  },
+  (table) => [
+    index('chunks_document_idx').on(table.documentId),
+    index('chunks_index_idx').on(table.chunkIndex)
+    // Vector similarity index will be created via raw SQL migration
+  ]
+);
+
 // Cache table (for semantic caching in Phase 6)
 export const cache = pgTable(
   'cache',
@@ -104,6 +178,10 @@ export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
+export type Document = typeof documents.$inferSelect;
+export type NewDocument = typeof documents.$inferInsert;
+export type DocumentChunk = typeof documentChunks.$inferSelect;
+export type NewDocumentChunk = typeof documentChunks.$inferInsert;
 export type AnalysisResult = typeof analysisResults.$inferSelect;
 export type NewAnalysisResult = typeof analysisResults.$inferInsert;
 
