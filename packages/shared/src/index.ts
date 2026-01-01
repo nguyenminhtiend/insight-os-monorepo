@@ -1,5 +1,8 @@
 // Shared types for InsightOS
 
+// Re-export schemas
+export * from './schemas/analysis.js';
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -16,13 +19,13 @@ export interface HealthStatus {
 export const createResponse = <T>(data: T): ApiResponse<T> => ({
   success: true,
   data,
-  timestamp: new Date().toISOString(),
+  timestamp: new Date().toISOString()
 });
 
 export const createErrorResponse = (error: string): ApiResponse<never> => ({
   success: false,
   error,
-  timestamp: new Date().toISOString(),
+  timestamp: new Date().toISOString()
 });
 
 // Chat types

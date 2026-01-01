@@ -23,7 +23,7 @@ Structure your responses with clear sections and bullet points.`,
 export const MODELS = {
   fast: 'gpt-4o-mini', // Quick responses, lower cost
   smart: 'gpt-4o', // Complex analysis
-  reasoning: 'o1-mini', // Deep reasoning tasks
+  reasoning: 'gpt-4o', // Deep reasoning tasks (using gpt-4o since o1 models have limited availability)
 } as const;
 
 export type ModelType = keyof typeof MODELS;
