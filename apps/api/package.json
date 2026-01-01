@@ -15,6 +15,7 @@
     "@insight-os/db-schema": "workspace:*",
     "@insight-os/shared": "workspace:*",
     "ai": "^6.0.5",
+    "cohere-ai": "^7.20.0",
     "drizzle-orm": "^0.38.2",
     "hono": "4.11.3",
     "ioredis": "^5.4.2",

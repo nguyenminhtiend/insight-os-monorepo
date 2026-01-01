@@ -1,8 +1,10 @@
 import { Hono } from 'hono';
 import { stream } from 'hono/streaming';
 import { retrieve } from '../lib/retrieval.js';
-import { ragQuery, ragQueryStream, multiQueryRAG } from '../services/rag.js';
+import { ragQuery, ragQueryStream, multiQueryRAG, advancedRAGQuery } from '../services/rag.js';
 import { getCacheStats, clearSemanticCache } from '../lib/cache.js';
+import { rerank } from '../lib/reranker.js';
+import { reformulateQuery } from '../lib/query.js';
 import { createResponse, createErrorResponse } from '@insight-os/shared';
 
 export const ragRoutes = new Hono();
@@ -20,7 +22,7 @@ ragRoutes.post('/query', async (c) => {
       documentIds,
       useCache = true,
       useVector = true,
-      useKeyword = true,
+      useKeyword = true
     } = await c.req.json<{
       query: string;
       limit?: number;
@@ -41,7 +43,7 @@ ragRoutes.post('/query', async (c) => {
       documentIds,
       useCache,
       useVector,
-      useKeyword,
+      useKeyword
     });
 
     return c.json(createResponse(result));
@@ -61,7 +63,7 @@ ragRoutes.post('/query/stream', async (c) => {
       query,
       limit = 10,
       threshold = 0.5,
-      documentIds,
+      documentIds
     } = await c.req.json<{
       query: string;
       limit?: number;
@@ -73,10 +75,14 @@ ragRoutes.post('/query/stream', async (c) => {
       return c.json(createErrorResponse('Query is required'), 400);
     }
 
-    const { stream: textStream, context, model } = await ragQueryStream(query, {
+    const {
+      stream: textStream,
+      context,
+      model
+    } = await ragQueryStream(query, {
       limit,
       threshold,
-      documentIds,
+      documentIds
     });
 
     c.header('Content-Type', 'text/event-stream');
@@ -85,15 +91,11 @@ ragRoutes.post('/query/stream', async (c) => {
 
     return stream(c, async (stream) => {
       // Send context first
-      await stream.write(
-        `data: ${JSON.stringify({ type: 'context', context })}\n\n`
-      );
+      await stream.write(`data: ${JSON.stringify({ type: 'context', context })}\n\n`);
 
       // Stream response
       for await (const chunk of textStream) {
-        await stream.write(
-          `data: ${JSON.stringify({ type: 'content', content: chunk })}\n\n`
-        );
+        await stream.write(`data: ${JSON.stringify({ type: 'content', content: chunk })}\n\n`);
       }
 
       await stream.write(`data: ${JSON.stringify({ type: 'done', model })}\n\n`);
@@ -114,7 +116,7 @@ ragRoutes.post('/query/multi', async (c) => {
       query,
       limit = 10,
       threshold = 0.5,
-      documentIds,
+      documentIds
     } = await c.req.json<{
       query: string;
       limit?: number;
@@ -129,7 +131,7 @@ ragRoutes.post('/query/multi', async (c) => {
     const result = await multiQueryRAG(query, {
       limit,
       threshold,
-      documentIds,
+      documentIds
     });
 
     return c.json(createResponse(result));
@@ -152,7 +154,7 @@ ragRoutes.post('/retrieve', async (c) => {
       documentIds,
       useVector = true,
       useKeyword = true,
-      vectorWeight = 0.7,
+      vectorWeight = 0.7
     } = await c.req.json<{
       query: string;
       limit?: number;
@@ -173,14 +175,14 @@ ragRoutes.post('/retrieve', async (c) => {
       documentIds,
       useVector,
       useKeyword,
-      vectorWeight,
+      vectorWeight
     });
 
     return c.json(
       createResponse({
         query,
         results,
-        count: results.length,
+        count: results.length
       })
     );
   } catch (error) {
@@ -217,3 +219,130 @@ ragRoutes.delete('/cache', async (c) => {
   }
 });
 
+/**
+ * POST /rag/query/advanced
+ * Advanced RAG with reranking and query reformulation
+ */
+ragRoutes.post('/query/advanced', async (c) => {
+  try {
+    const {
+      query,
+      limit = 5,
+      threshold = 0.5,
+      documentIds,
+      useCache = true,
+      useReranking = true,
+      useQueryReformulation = true,
+      useHyDE = false,
+      conversationContext
+    } = await c.req.json<{
+      query: string;
+      limit?: number;
+      threshold?: number;
+      documentIds?: string[];
+      useCache?: boolean;
+      useReranking?: boolean;
+      useQueryReformulation?: boolean;
+      useHyDE?: boolean;
+      conversationContext?: {
+        messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+      };
+    }>();
+
+    if (!query) {
+      return c.json(createErrorResponse('Query is required'), 400);
+    }
+
+    const result = await advancedRAGQuery(query, {
+      limit,
+      threshold,
+      documentIds,
+      useCache,
+      useReranking,
+      useQueryReformulation,
+      useHyDE,
+      conversationContext
+    });
+
+    return c.json(createResponse(result));
+  } catch (error) {
+    console.error('Advanced RAG error:', error);
+    return c.json(createErrorResponse('Query failed'), 500);
+  }
+});
+
+/**
+ * POST /rag/rerank
+ * Standalone reranking endpoint
+ */
+ragRoutes.post('/rerank', async (c) => {
+  try {
+    const {
+      query,
+      results,
+      topK = 5
+    } = await c.req.json<{
+      query: string;
+      results: Array<{ id: string; content: string; score: number }>;
+      topK?: number;
+    }>();
+
+    if (!query || !results) {
+      return c.json(createErrorResponse('Query and results are required'), 400);
+    }
+
+    const reranked = await rerank(
+      query,
+      results.map((r) => ({
+        ...r,
+        documentId: '',
+        metadata: null,
+        source: 'hybrid' as const
+      })),
+      { topK }
+    );
+
+    return c.json(
+      createResponse({
+        query,
+        results: reranked,
+        count: reranked.length
+      })
+    );
+  } catch (error) {
+    console.error('Rerank error:', error);
+    return c.json(createErrorResponse('Reranking failed'), 500);
+  }
+});
+
+/**
+ * POST /rag/reformulate
+ * Query reformulation endpoint
+ */
+ragRoutes.post('/reformulate', async (c) => {
+  try {
+    const { query, conversationContext } = await c.req.json<{
+      query: string;
+      conversationContext?: {
+        messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+      };
+    }>();
+
+    if (!query) {
+      return c.json(createErrorResponse('Query is required'), 400);
+    }
+
+    const reformulated = await reformulateQuery(query, conversationContext);
+
+    return c.json(
+      createResponse({
+        original: query,
+        reformulated,
+        wasChanged: reformulated !== query
+      })
+    );
+  } catch (error) {
+    console.error('Reformulate error:', error);
+    return c.json(createErrorResponse('Reformulation failed'), 500);
+  }
+});

@@ -2,6 +2,12 @@ import { streamText, generateText } from 'ai';
 import { openai, MODELS } from '../lib/ai.js';
 import { retrieve, type RetrievalOptions, type RetrievalResult } from '../lib/retrieval.js';
 import { getSemanticCache, setSemanticCache } from '../lib/cache.js';
+import { rerank, type RerankResult } from '../lib/reranker.js';
+import {
+  reformulateQuery,
+  generateHypotheticalAnswer,
+  type ConversationContext
+} from '../lib/query.js';
 
 export interface RAGOptions extends RetrievalOptions {
   model?: string;
@@ -193,6 +199,167 @@ Original query: "${query}"`,
       promptTokens: (result.usage as any).inputTokens ?? 0,
       completionTokens: (result.usage as any).outputTokens ?? 0,
       totalTokens: result.usage.totalTokens ?? 0
+    }
+  };
+}
+
+// ==================== ADVANCED RAG (Phase 7) ====================
+
+export interface AdvancedRAGOptions extends RetrievalOptions {
+  model?: string;
+  systemPrompt?: string;
+  useCache?: boolean;
+  useReranking?: boolean;
+  useQueryReformulation?: boolean;
+  useHyDE?: boolean;
+  conversationContext?: ConversationContext;
+}
+
+export interface AdvancedRAGResponse {
+  answer: string;
+  context: RerankResult[];
+  originalQuery: string;
+  reformulatedQuery?: string;
+  cached: boolean;
+  model: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+  metadata: {
+    rerankingUsed: boolean;
+    queryReformulated: boolean;
+    hydeUsed: boolean;
+    retrievalCount: number;
+    rerankCount: number;
+  };
+}
+
+/**
+ * Advanced RAG with reranking and query reformulation
+ */
+export async function advancedRAGQuery(
+  query: string,
+  options: AdvancedRAGOptions = {}
+): Promise<AdvancedRAGResponse> {
+  const {
+    model = MODELS.smart,
+    systemPrompt = DEFAULT_SYSTEM_PROMPT,
+    useCache = true,
+    useReranking = true,
+    useQueryReformulation = true,
+    useHyDE = false,
+    conversationContext,
+    limit = 20, // Retrieve more for reranking
+    ...retrievalOptions
+  } = options;
+
+  // Step 1: Query Reformulation
+  let searchQuery = query;
+  let wasReformulated = false;
+
+  if (useQueryReformulation && conversationContext) {
+    searchQuery = await reformulateQuery(query, conversationContext);
+    wasReformulated = searchQuery !== query;
+  }
+
+  // Check cache with reformulated query
+  if (useCache) {
+    const cached = await getSemanticCache(searchQuery);
+    if (cached.hit && cached.response) {
+      return {
+        answer: cached.response,
+        context: [],
+        originalQuery: query,
+        reformulatedQuery: wasReformulated ? searchQuery : undefined,
+        cached: true,
+        model: 'cache',
+        metadata: {
+          rerankingUsed: false,
+          queryReformulated: wasReformulated,
+          hydeUsed: false,
+          retrievalCount: 0,
+          rerankCount: 0
+        }
+      };
+    }
+  }
+
+  // Step 2: Optional HyDE
+  let retrievalQuery = searchQuery;
+  let hydeUsed = false;
+
+  if (useHyDE) {
+    const hypothetical = await generateHypotheticalAnswer(searchQuery);
+    retrievalQuery = hypothetical;
+    hydeUsed = true;
+  }
+
+  // Step 3: Retrieval
+  const retrievedResults = await retrieve(retrievalQuery, {
+    ...retrievalOptions,
+    limit: useReranking ? limit : options.limit || 10
+  });
+
+  // Step 4: Reranking
+  let finalContext: RerankResult[];
+
+  if (useReranking && retrievedResults.length > 0) {
+    finalContext = await rerank(searchQuery, retrievedResults, {
+      topK: options.limit || 5,
+      threshold: 0.3
+    });
+  } else {
+    finalContext = retrievedResults.map((r) => ({
+      ...r,
+      rerankScore: r.score,
+      originalScore: r.score
+    }));
+  }
+
+  // Step 5: Generate Response
+  const contextStr = finalContext
+    .map((c, i) => `[${i + 1}] (relevance: ${(c.rerankScore * 100).toFixed(0)}%) ${c.content}`)
+    .join('\n\n');
+
+  const prompt = contextStr ? `Context:\n${contextStr}\n\nQuestion: ${searchQuery}` : searchQuery;
+
+  const result = await generateText({
+    model: openai(model),
+    system: systemPrompt,
+    prompt,
+    temperature: 0.3,
+    maxTokens: 2000
+  } as any);
+
+  // Cache the response
+  if (useCache) {
+    await setSemanticCache(searchQuery, result.text, {
+      contextCount: finalContext.length,
+      model,
+      reranked: useReranking
+    });
+  }
+
+  return {
+    answer: result.text,
+    context: finalContext,
+    originalQuery: query,
+    reformulatedQuery: wasReformulated ? searchQuery : undefined,
+    cached: false,
+    model,
+    usage: {
+      promptTokens: (result.usage as any).inputTokens ?? 0,
+      completionTokens: (result.usage as any).outputTokens ?? 0,
+      totalTokens: result.usage.totalTokens ?? 0
+    },
+    metadata: {
+      rerankingUsed: useReranking,
+      queryReformulated: wasReformulated,
+      hydeUsed,
+      retrievalCount: retrievedResults.length,
+      rerankCount: finalContext.length
     }
   };
 }
