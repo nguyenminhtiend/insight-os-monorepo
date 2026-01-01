@@ -382,10 +382,23 @@ function getModelDescription(type: ModelType): string {
 
 ### Step 5: Build Chat UI
 
-**5.1 Create `apps/web/app/components/Chat.tsx`:**
+**5.1 Install required shadcn/ui components:**
+
+```bash
+cd apps/web
+npx shadcn@latest add card input button badge scroll-area
+```
+
+**5.2 Create `apps/web/app/components/Chat.tsx`:**
 
 ```tsx
 import { useState, useRef, useEffect, type FormEvent } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface Message {
   id: string;
@@ -488,209 +501,89 @@ export function Chat() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h2 style={styles.headerTitle}>💬 Chat with InsightOS</h2>
-        <span style={styles.headerBadge}>Streaming</span>
-      </div>
+    <Card className="h-[600px] flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardTitle className="text-base font-semibold">💬 Chat with InsightOS</CardTitle>
+        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+          Streaming
+        </Badge>
+      </CardHeader>
 
-      <div style={styles.messages}>
-        {messages.length === 0 && (
-          <div style={styles.empty}>
-            <p>Ask me about markets, companies, or competitive analysis.</p>
-            <div style={styles.suggestions}>
-              <button
-                style={styles.suggestion}
-                onClick={() => setInput('What are the key trends in AI industry for 2025?')}
-              >
-                AI trends 2025
-              </button>
-              <button
-                style={styles.suggestion}
-                onClick={() => setInput('Compare Tesla vs BYD market position')}
-              >
-                Tesla vs BYD
-              </button>
-              <button
-                style={styles.suggestion}
-                onClick={() => setInput('Explain the SWOT framework')}
-              >
-                SWOT framework
-              </button>
+      <CardContent className="flex-1 flex flex-col p-0">
+        <ScrollArea className="flex-1 px-6">
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <p className="text-muted-foreground mb-4">
+                Ask me about markets, companies, or competitive analysis.
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInput('What are the key trends in AI industry for 2025?')}
+                >
+                  AI trends 2025
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInput('Compare Tesla vs BYD market position')}
+                >
+                  Tesla vs BYD
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInput('Explain the SWOT framework')}
+                >
+                  SWOT framework
+                </Button>
+              </div>
             </div>
+          )}
+
+          <div className="flex flex-col gap-4 py-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={cn(
+                  'flex flex-col gap-1 px-4 py-3 rounded-lg max-w-[85%]',
+                  message.role === 'user'
+                    ? 'ml-auto bg-primary text-primary-foreground'
+                    : 'mr-auto bg-muted',
+                )}
+              >
+                <div className="text-xs opacity-70">
+                  {message.role === 'user' ? '👤 You' : '🧠 InsightOS'}
+                </div>
+                <div className="text-sm whitespace-pre-wrap">
+                  {message.content || (
+                    <span className="italic text-muted-foreground">Thinking...</span>
+                  )}
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
           </div>
-        )}
+        </ScrollArea>
 
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            style={{
-              ...styles.message,
-              ...(message.role === 'user' ? styles.userMessage : styles.assistantMessage),
-            }}
-          >
-            <div style={styles.messageRole}>
-              {message.role === 'user' ? '👤 You' : '🧠 InsightOS'}
-            </div>
-            <div style={styles.messageContent}>
-              {message.content || <span style={styles.typing}>Thinking...</span>}
-            </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about markets, companies, trends..."
-          style={styles.input}
-          disabled={isLoading}
-        />
-        <button
-          type="submit"
-          style={{
-            ...styles.button,
-            ...(isLoading ? styles.buttonDisabled : {}),
-          }}
-          disabled={isLoading}
-        >
-          {isLoading ? '...' : '→'}
-        </button>
-      </form>
-    </div>
+        <form onSubmit={handleSubmit} className="flex gap-3 p-4 border-t">
+          <Input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask about markets, companies, trends..."
+            disabled={isLoading}
+            className="flex-1"
+          />
+          <Button type="submit" disabled={isLoading} size="icon">
+            {isLoading ? '...' : '→'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '600px',
-    background: '#0f0f23',
-    borderRadius: '16px',
-    border: '1px solid #333',
-    overflow: 'hidden',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '16px 20px',
-    borderBottom: '1px solid #333',
-    background: '#1a1a3e',
-  },
-  headerTitle: {
-    margin: 0,
-    fontSize: '1rem',
-    fontWeight: 600,
-    color: '#fff',
-  },
-  headerBadge: {
-    fontSize: '0.75rem',
-    padding: '4px 8px',
-    background: '#4ade80',
-    color: '#000',
-    borderRadius: '4px',
-    fontWeight: 600,
-  },
-  messages: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: '20px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-  },
-  empty: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    color: '#888',
-    textAlign: 'center',
-  },
-  suggestions: {
-    display: 'flex',
-    gap: '8px',
-    marginTop: '16px',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-  },
-  suggestion: {
-    padding: '8px 16px',
-    background: '#1a1a3e',
-    border: '1px solid #333',
-    borderRadius: '20px',
-    color: '#888',
-    cursor: 'pointer',
-    fontSize: '0.875rem',
-    transition: 'all 0.2s',
-  },
-  message: {
-    padding: '12px 16px',
-    borderRadius: '12px',
-    maxWidth: '85%',
-  },
-  userMessage: {
-    alignSelf: 'flex-end',
-    background: '#3b82f6',
-    color: '#fff',
-  },
-  assistantMessage: {
-    alignSelf: 'flex-start',
-    background: '#1a1a3e',
-    color: '#fff',
-    border: '1px solid #333',
-  },
-  messageRole: {
-    fontSize: '0.75rem',
-    marginBottom: '4px',
-    opacity: 0.7,
-  },
-  messageContent: {
-    lineHeight: 1.5,
-    whiteSpace: 'pre-wrap',
-  },
-  typing: {
-    color: '#888',
-    fontStyle: 'italic',
-  },
-  form: {
-    display: 'flex',
-    gap: '12px',
-    padding: '16px 20px',
-    borderTop: '1px solid #333',
-    background: '#1a1a3e',
-  },
-  input: {
-    flex: 1,
-    padding: '12px 16px',
-    background: '#0f0f23',
-    border: '1px solid #333',
-    borderRadius: '8px',
-    color: '#fff',
-    fontSize: '1rem',
-    outline: 'none',
-  },
-  button: {
-    padding: '12px 20px',
-    background: '#3b82f6',
-    border: 'none',
-    borderRadius: '8px',
-    color: '#fff',
-    fontSize: '1.25rem',
-    cursor: 'pointer',
-    transition: 'background 0.2s',
-  },
-  buttonDisabled: {
-    background: '#333',
-    cursor: 'not-allowed',
-  },
-};
 ```
 
 **5.2 Update `apps/web/app/routes/index.tsx`:**
@@ -699,6 +592,7 @@ const styles: Record<string, React.CSSProperties> = {
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Chat } from '../components/Chat';
 
 export default function Home() {
@@ -717,79 +611,34 @@ export default function Home() {
   }, []);
 
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1 style={styles.logo}>🧠 InsightOS</h1>
-        <div style={styles.status}>
+    <div className="min-h-screen flex flex-col">
+      <header className="flex items-center justify-between px-8 py-4 border-b">
+        <h1 className="text-2xl font-bold">🧠 InsightOS</h1>
+        <div className="text-sm">
           {error ? (
-            <span style={styles.statusOffline}>● Offline</span>
+            <Badge variant="destructive">● Offline</Badge>
           ) : health ? (
-            <span style={styles.statusOnline}>● Online</span>
+            <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+              ● Online
+            </Badge>
           ) : (
-            <span style={styles.statusLoading}>● Connecting...</span>
+            <Badge variant="outline">● Connecting...</Badge>
           )}
         </div>
       </header>
 
-      <main style={styles.main}>
+      <main className="flex-1 p-8 max-w-4xl w-full mx-auto">
         <Chat />
       </main>
 
-      <footer style={styles.footer}>
-        <p>Phase 1: LLM Basics ✓ | Streaming Chat</p>
+      <footer className="text-center py-4 border-t">
+        <p className="text-sm text-green-600 dark:text-green-400">
+          Phase 1: LLM Basics ✓ | Streaming Chat
+        </p>
       </footer>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '16px 32px',
-    borderBottom: '1px solid #333',
-  },
-  logo: {
-    fontSize: '1.5rem',
-    fontWeight: 700,
-    color: '#fff',
-    margin: 0,
-  },
-  status: {
-    fontSize: '0.875rem',
-  },
-  statusOnline: {
-    color: '#4ade80',
-  },
-  statusOffline: {
-    color: '#ef4444',
-  },
-  statusLoading: {
-    color: '#888',
-  },
-  main: {
-    flex: 1,
-    padding: '32px',
-    maxWidth: '800px',
-    width: '100%',
-    margin: '0 auto',
-  },
-  footer: {
-    padding: '16px 32px',
-    borderTop: '1px solid #333',
-    textAlign: 'center',
-    color: '#4ade80',
-    fontSize: '0.875rem',
-  },
-};
 ```
 
 ---

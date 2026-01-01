@@ -71,7 +71,13 @@ This will automatically install Node.js 24.12.0 and pnpm 10.26.2 as specified in
 │   └── web/                    # Next.js frontend
 │       ├── app/
 │       │   ├── layout.tsx      # Root layout
-│       │   └── page.tsx        # Home page
+│       │   ├── page.tsx        # Home page
+│       │   └── globals.css     # Global styles with shadcn theme
+│       ├── components/
+│       │   └── ui/             # shadcn/ui components
+│       ├── lib/
+│       │   └── utils.ts        # Utility functions (cn helper)
+│       ├── components.json     # shadcn/ui config
 │       ├── next.config.ts
 │       ├── tailwind.config.ts
 │       ├── package.json
@@ -464,15 +470,196 @@ export default {
 };
 ```
 
-**4.6 Create `apps/web/app/globals.css`:**
+**4.6 Install and Configure shadcn/ui:**
+
+```bash
+cd apps/web
+pnpm add class-variance-authority clsx tailwind-merge lucide-react
+pnpm add -D @types/node
+```
+
+**4.7 Create `apps/web/components.json`:**
+
+```json
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.ts",
+    "css": "app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui"
+  }
+}
+```
+
+**4.8 Update `apps/web/tailwind.config.ts` with neutral theme:**
+
+```typescript
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  darkMode: ['class'],
+  content: ['./app/**/*.{js,ts,jsx,tsx,mdx}', './components/**/*.{js,ts,jsx,tsx,mdx}'],
+  theme: {
+    extend: {
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
+      },
+      colors: {
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
+        },
+        primary: {
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
+        },
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        chart: {
+          '1': 'hsl(var(--chart-1))',
+          '2': 'hsl(var(--chart-2))',
+          '3': 'hsl(var(--chart-3))',
+          '4': 'hsl(var(--chart-4))',
+          '5': 'hsl(var(--chart-5))',
+        },
+      },
+    },
+  },
+  plugins: [require('tailwindcss-animate')],
+};
+
+export default config;
+```
+
+**4.9 Update `apps/web/package.json` dependencies:**
+
+Add to the `devDependencies`:
+
+```json
+"tailwindcss-animate": "latest"
+```
+
+**4.10 Create `apps/web/app/globals.css`:**
 
 ```css
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
 ```
 
-**4.7 Create `apps/web/app/layout.tsx`:**
+**4.11 Create `apps/web/lib/utils.ts`:**
+
+```typescript
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+```
+
+**4.12 Create `apps/web/app/layout.tsx`:**
 
 ```tsx
 import type { Metadata } from 'next';
@@ -485,19 +672,28 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body>{children}</body>
     </html>
   );
 }
 ```
 
-**4.8 Create `apps/web/app/page.tsx`:**
+**4.13 Install shadcn/ui Card component:**
+
+```bash
+cd apps/web
+npx shadcn@latest add card badge
+```
+
+**4.14 Create `apps/web/app/page.tsx`:**
 
 ```tsx
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 interface HealthData {
   status: string;
@@ -517,46 +713,55 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
-      <div className="bg-slate-950 rounded-2xl p-12 shadow-2xl border border-slate-800 max-w-md w-11/12">
-        <h1 className="text-4xl font-bold text-white text-center mb-2">🧠 InsightOS</h1>
-        <p className="text-slate-400 text-center mb-6">Strategic Market Intelligence Platform</p>
-
-        <div className="h-px bg-slate-800 my-6" />
-
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
-          API Status
-        </h2>
-
-        {error ? (
-          <div className="p-4 bg-red-950 border border-red-500 rounded-lg text-red-200">
-            ❌ API Offline: {error}
+    <main className="min-h-screen flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl font-bold">🧠 InsightOS</CardTitle>
+          <CardDescription>Strategic Market Intelligence Platform</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              API Status
+            </h2>
+            {error ? (
+              <div className="p-4 bg-destructive/10 border border-destructive rounded-lg text-destructive text-sm">
+                ❌ API Offline: {error}
+              </div>
+            ) : health ? (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <Badge
+                    variant="outline"
+                    className="bg-green-500/10 text-green-600 border-green-500/20"
+                  >
+                    {health.status} ✅
+                  </Badge>
+                </div>
+                <div className="flex justify-between p-3 bg-muted rounded-lg">
+                  <span className="text-sm text-muted-foreground">Version:</span>
+                  <span className="text-sm font-semibold">{health.version}</span>
+                </div>
+                <div className="flex justify-between p-3 bg-muted rounded-lg">
+                  <span className="text-sm text-muted-foreground">Uptime:</span>
+                  <span className="text-sm font-semibold">{health.uptime}s</span>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-muted rounded-lg text-muted-foreground text-center text-sm">
+                Loading...
+              </div>
+            )}
           </div>
-        ) : health ? (
-          <div className="space-y-3">
-            <div className="flex justify-between p-3 bg-slate-900 rounded-lg">
-              <span className="text-slate-400">Status:</span>
-              <span className="text-green-400 font-semibold">{health.status} ✅</span>
-            </div>
-            <div className="flex justify-between p-3 bg-slate-900 rounded-lg">
-              <span className="text-slate-400">Version:</span>
-              <span className="text-green-400 font-semibold">{health.version}</span>
-            </div>
-            <div className="flex justify-between p-3 bg-slate-900 rounded-lg">
-              <span className="text-slate-400">Uptime:</span>
-              <span className="text-green-400 font-semibold">{health.uptime}s</span>
-            </div>
+
+          <div className="pt-4 border-t">
+            <p className="text-center text-sm text-green-600 dark:text-green-400">
+              Phase 0: Monorepo Bootstrap ✓
+            </p>
           </div>
-        ) : (
-          <div className="p-4 bg-slate-900 rounded-lg text-slate-400 text-center">Loading...</div>
-        )}
-
-        <div className="h-px bg-slate-800 my-6" />
-
-        <div className="text-center text-green-400 text-sm">
-          <p>Phase 0: Monorepo Bootstrap ✓</p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </main>
   );
 }

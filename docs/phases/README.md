@@ -83,7 +83,7 @@ A progressive, 16-phase implementation plan for building a production-grade AI-p
 | **Queue**           | BullMQ               | Phase 12         |
 | **Graph DB**        | Neo4j                | Phase 14         |
 | **Observability**   | Langfuse             | Phase 13         |
-| **UI Components**   | shadcn/ui            | (Future)         |
+| **UI Components**   | shadcn/ui            | Phase 0          |
 
 ---
 
