@@ -24,3 +24,34 @@ export const createErrorResponse = (error: string): ApiResponse<never> => ({
   error,
   timestamp: new Date().toISOString(),
 });
+
+// Chat types
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  createdAt: Date;
+}
+
+export interface ChatRequest {
+  messages: Array<{
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+  }>;
+  model?: string;
+  stream?: boolean;
+}
+
+export interface ChatResponse {
+  id: string;
+  message: ChatMessage;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+
+export const generateId = (): string => {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+};
