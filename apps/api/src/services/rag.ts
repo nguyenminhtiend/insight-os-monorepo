@@ -1,10 +1,6 @@
 import { streamText, generateText } from 'ai';
 import { openai, MODELS } from '../lib/ai.js';
-import {
-  retrieve,
-  type RetrievalOptions,
-  type RetrievalResult,
-} from '../lib/retrieval.js';
+import { retrieve, type RetrievalOptions, type RetrievalResult } from '../lib/retrieval.js';
 import { getSemanticCache, setSemanticCache } from '../lib/cache.js';
 
 export interface RAGOptions extends RetrievalOptions {
@@ -39,10 +35,7 @@ Guidelines:
 /**
  * RAG query - retrieve and generate
  */
-export async function ragQuery(
-  query: string,
-  options: RAGOptions = {}
-): Promise<RAGResponse> {
+export async function ragQuery(query: string, options: RAGOptions = {}): Promise<RAGResponse> {
   const {
     model = MODELS.smart,
     systemPrompt = DEFAULT_SYSTEM_PROMPT,
@@ -59,7 +52,7 @@ export async function ragQuery(
         answer: cached.response,
         context: [],
         cached: true,
-        model: 'cache',
+        model: 'cache'
       };
     }
   }
@@ -71,23 +64,21 @@ export async function ragQuery(
   const contextStr = context.map((c, i) => `[${i + 1}] ${c.content}`).join('\n\n');
 
   // Generate response
-  const prompt = contextStr
-    ? `Context:\n${contextStr}\n\nQuestion: ${query}`
-    : query;
+  const prompt = contextStr ? `Context:\n${contextStr}\n\nQuestion: ${query}` : query;
 
   const result = await generateText({
     model: openai(model),
     system: systemPrompt,
     prompt,
     temperature: 0.3,
-    maxTokens: 2000,
+    maxTokens: 2000
   } as any);
 
   // Cache the response
   if (useCache) {
     await setSemanticCache(query, result.text, {
       contextCount: context.length,
-      model,
+      model
     });
   }
 
@@ -99,8 +90,8 @@ export async function ragQuery(
     usage: {
       promptTokens: (result.usage as any).inputTokens ?? 0,
       completionTokens: (result.usage as any).outputTokens ?? 0,
-      totalTokens: result.usage.totalTokens ?? 0,
-    },
+      totalTokens: result.usage.totalTokens ?? 0
+    }
   };
 }
 
@@ -127,9 +118,7 @@ export async function ragQueryStream(
   // Build context string
   const contextStr = context.map((c, i) => `[${i + 1}] ${c.content}`).join('\n\n');
 
-  const prompt = contextStr
-    ? `Context:\n${contextStr}\n\nQuestion: ${query}`
-    : query;
+  const prompt = contextStr ? `Context:\n${contextStr}\n\nQuestion: ${query}` : query;
 
   // Stream response
   const result = streamText({
@@ -137,23 +126,20 @@ export async function ragQueryStream(
     system: systemPrompt,
     prompt,
     temperature: 0.3,
-    maxTokens: 2000,
+    maxTokens: 2000
   } as any);
 
   return {
     stream: result.textStream,
     context,
-    model,
+    model
   };
 }
 
 /**
  * Multi-query RAG - generate multiple query variations for better retrieval
  */
-export async function multiQueryRAG(
-  query: string,
-  options: RAGOptions = {}
-): Promise<RAGResponse> {
+export async function multiQueryRAG(query: string, options: RAGOptions = {}): Promise<RAGResponse> {
   const { model = MODELS.smart, ...retrievalOptions } = options;
 
   // Generate query variations
@@ -164,13 +150,10 @@ Return only the variations, one per line.
 
 Original query: "${query}"`,
     temperature: 0.7,
-    maxTokens: 200,
+    maxTokens: 200
   } as any);
 
-  const variations = [
-    query,
-    ...variationsResult.text.split('\n').filter((v) => v.trim()),
-  ];
+  const variations = [query, ...variationsResult.text.split('\n').filter((v) => v.trim())];
 
   // Retrieve for each variation
   const allResults: RetrievalResult[] = [];
@@ -191,16 +174,14 @@ Original query: "${query}"`,
   const topContext = allResults.slice(0, retrievalOptions.limit || 10);
 
   // Generate final response
-  const contextStr = topContext
-    .map((c, i) => `[${i + 1}] ${c.content}`)
-    .join('\n\n');
+  const contextStr = topContext.map((c, i) => `[${i + 1}] ${c.content}`).join('\n\n');
 
   const result = await generateText({
     model: openai(model),
     system: DEFAULT_SYSTEM_PROMPT,
     prompt: `Context:\n${contextStr}\n\nQuestion: ${query}`,
     temperature: 0.3,
-    maxTokens: 2000,
+    maxTokens: 2000
   } as any);
 
   return {
@@ -211,8 +192,7 @@ Original query: "${query}"`,
     usage: {
       promptTokens: (result.usage as any).inputTokens ?? 0,
       completionTokens: (result.usage as any).outputTokens ?? 0,
-      totalTokens: result.usage.totalTokens ?? 0,
-    },
+      totalTokens: result.usage.totalTokens ?? 0
+    }
   };
 }
-
