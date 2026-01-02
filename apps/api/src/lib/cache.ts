@@ -42,7 +42,7 @@ export async function getSemanticCache(
         if (!bestMatch || similarity > bestMatch.similarity) {
           bestMatch = {
             response: cached.response,
-            similarity,
+            similarity
           };
         }
       }
@@ -52,7 +52,7 @@ export async function getSemanticCache(
       return {
         hit: true,
         response: bestMatch.response,
-        similarity: bestMatch.similarity,
+        similarity: bestMatch.similarity
       };
     }
 
@@ -80,7 +80,7 @@ export async function setSemanticCache(
       queryEmbedding,
       response,
       metadata,
-      timestamp: Date.now(),
+      timestamp: Date.now()
     };
 
     await cacheHelpers.set(cacheKey, cached, CACHE_TTL);
@@ -124,7 +124,6 @@ export async function getCacheStats(): Promise<{
   return {
     entries: keys.length,
     oldestTimestamp: oldest === Infinity ? undefined : oldest,
-    newestTimestamp: newest === 0 ? undefined : newest,
+    newestTimestamp: newest === 0 ? undefined : newest
   };
 }
-

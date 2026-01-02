@@ -9,30 +9,35 @@ Phase 6 implemented production-grade RAG retrieval with hybrid search, semantic 
 ## Key Features Implemented
 
 ### 1. **Hybrid Search System**
+
 - **Vector Search**: Semantic similarity using pgvector embeddings
 - **Keyword Search**: BM25-like full-text search with PostgreSQL trigrams
 - **RRF Fusion**: Reciprocal Rank Fusion to combine both approaches
 - **Flexible Weights**: Configurable vector vs keyword weighting
 
 ### 2. **Full-Text Search Extensions**
+
 - Enabled `pg_trgm` extension for trigram similarity
 - Added `tsvector` column with full-text indexing
 - GIN indices for both trigram and FTS search
 - Normalized scoring across search types
 
 ### 3. **Semantic Caching**
+
 - Redis-based cache with embedding similarity
 - 95% similarity threshold for cache hits
 - Automatic TTL management (1 hour default)
 - Cache statistics and manual clearing
 
 ### 4. **RAG Service**
+
 - Standard RAG query with context injection
 - Streaming RAG responses
 - Multi-query RAG with automatic query expansion
 - Configurable system prompts and models
 
 ### 5. **API Endpoints**
+
 ```
 POST   /rag/query          - Standard RAG query
 POST   /rag/query/stream   - Streaming RAG
@@ -63,6 +68,7 @@ packages/db-schema/drizzle/
 ### Retrieval Strategies
 
 **Vector Search:**
+
 ```sql
 SELECT *, 1 - (embedding <=> $query_vector) as score
 FROM document_chunks
@@ -71,6 +77,7 @@ ORDER BY embedding <=> $query_vector
 ```
 
 **Keyword Search:**
+
 ```sql
 SELECT *, ts_rank(content_tsv, to_tsquery('english', $query)) as score
 FROM document_chunks
@@ -79,9 +86,9 @@ ORDER BY score DESC
 ```
 
 **Hybrid RRF:**
+
 ```typescript
-score = vectorWeight * (1 / (k + vectorRank)) +
-        (1 - vectorWeight) * (1 / (k + keywordRank))
+score = vectorWeight * (1 / (k + vectorRank)) + (1 - vectorWeight) * (1 / (k + keywordRank));
 ```
 
 ### Semantic Cache Flow
@@ -102,11 +109,11 @@ score = vectorWeight * (1 / (k + vectorRank)) +
 
 ### Search Comparison
 
-| Strategy | Best For | Speed | Recall |
-|----------|----------|-------|--------|
-| Vector | Semantic similarity | Fast | High |
-| Keyword | Exact term matching | Very Fast | Medium |
-| Hybrid | Best of both | Fast | Highest |
+| Strategy | Best For            | Speed     | Recall  |
+| -------- | ------------------- | --------- | ------- |
+| Vector   | Semantic similarity | Fast      | High    |
+| Keyword  | Exact term matching | Very Fast | Medium  |
+| Hybrid   | Best of both        | Fast      | Highest |
 
 ### Cache Performance
 
@@ -117,6 +124,7 @@ score = vectorWeight * (1 / (k + vectorRank)) +
 ## Testing
 
 Created `test-phase6.sh` with comprehensive tests:
+
 - Vector-only search
 - Keyword-only search
 - Hybrid search with RRF
@@ -128,6 +136,7 @@ Created `test-phase6.sh` with comprehensive tests:
 ## Example Usage
 
 ### Basic RAG Query
+
 ```bash
 curl -X POST http://localhost:3001/rag/query \
   -H "Content-Type: application/json" \
@@ -139,6 +148,7 @@ curl -X POST http://localhost:3001/rag/query \
 ```
 
 ### Hybrid Search Only
+
 ```bash
 curl -X POST http://localhost:3001/rag/retrieve \
   -H "Content-Type: application/json" \
@@ -151,6 +161,7 @@ curl -X POST http://localhost:3001/rag/retrieve \
 ```
 
 ### Multi-Query RAG
+
 ```bash
 curl -X POST http://localhost:3001/rag/query/multi \
   -H "Content-Type: application/json" \
@@ -163,6 +174,7 @@ curl -X POST http://localhost:3001/rag/query/multi \
 ## API Response Examples
 
 ### RAG Query Response
+
 ```json
 {
   "success": true,
@@ -188,6 +200,7 @@ curl -X POST http://localhost:3001/rag/query/multi \
 ```
 
 ### Cache Stats Response
+
 ```json
 {
   "success": true,
@@ -216,6 +229,7 @@ curl -X POST http://localhost:3001/rag/query/multi \
 ## Configuration
 
 Key environment variables:
+
 ```bash
 DATABASE_URL=postgresql://...
 REDIS_URL=redis://...
@@ -225,6 +239,7 @@ OPENAI_API_KEY=sk-...
 ## What's Next
 
 **Phase 7: RAG Advanced** will add:
+
 - **Reranking**: Cross-encoder models for result reordering
 - **Query Reformulation**: Better follow-up question handling
 - **Contextual Retrieval**: Smarter chunk selection with document metadata
@@ -241,4 +256,3 @@ cd apps/api && pnpm dev
 ```
 
 All retrieval strategies, caching, and RAG generation working as expected! ✅
-

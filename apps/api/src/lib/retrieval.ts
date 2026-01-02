@@ -26,7 +26,7 @@ const DEFAULT_OPTIONS: Required<RetrievalOptions> = {
   documentIds: [],
   useVector: true,
   useKeyword: true,
-  vectorWeight: 0.7,
+  vectorWeight: 0.7
 };
 
 /**
@@ -66,7 +66,7 @@ export async function vectorSearch(
     documentId: row.documentId,
     score: parseFloat(row.score),
     metadata: row.metadata,
-    source: 'vector' as const,
+    source: 'vector' as const
   }));
 }
 
@@ -118,7 +118,7 @@ export async function keywordSearch(
     documentId: row.documentId,
     score: row.score / maxScore,
     metadata: row.metadata,
-    source: 'keyword' as const,
+    source: 'keyword' as const
   }));
 }
 
@@ -133,12 +133,8 @@ export async function hybridSearch(
 
   // Run both searches in parallel
   const [vectorResults, keywordResults] = await Promise.all([
-    opts.useVector
-      ? vectorSearch(query, { ...opts, limit: opts.limit * 2 })
-      : [],
-    opts.useKeyword
-      ? keywordSearch(query, { ...opts, limit: opts.limit * 2 })
-      : [],
+    opts.useVector ? vectorSearch(query, { ...opts, limit: opts.limit * 2 }) : [],
+    opts.useKeyword ? keywordSearch(query, { ...opts, limit: opts.limit * 2 }) : []
   ]);
 
   // Create rank maps
@@ -189,7 +185,7 @@ export async function hybridSearch(
     return {
       ...result,
       score: score / maxScore,
-      source: 'hybrid' as const,
+      source: 'hybrid' as const
     };
   });
 }
@@ -216,4 +212,3 @@ export async function retrieve(
   // If only keyword
   return keywordSearch(query, opts);
 }
-
