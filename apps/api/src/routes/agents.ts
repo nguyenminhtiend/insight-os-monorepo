@@ -11,6 +11,7 @@ export const agentsRoutes = new Hono();
  * List available tools
  */
 agentsRoutes.get('/tools', (c) => {
+  console.log('Tool');
   const tools = Object.entries(allTools).map(([name, tool]) => ({
     name,
     description: tool.description,
@@ -106,11 +107,13 @@ agentsRoutes.post('/tool/execute', async (c) => {
     // Execute tool
     const result = await (tool as any).execute(args);
 
-    return c.json(createResponse({
-      tool: toolName,
-      args,
-      result,
-    }));
+    return c.json(
+      createResponse({
+        tool: toolName,
+        args,
+        result,
+      }),
+    );
   } catch (error) {
     console.error('Tool execution error:', error);
     return c.json(createErrorResponse('Tool execution failed'), 500);

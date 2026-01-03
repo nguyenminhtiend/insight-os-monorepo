@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug API",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "${workspaceFolder}/apps/api/node_modules/.bin/tsx",
+            "args": [
+                "${workspaceFolder}/apps/api/src/index.ts"
+            ],
+            "cwd": "${workspaceFolder}/apps/api",
+            "envFile": "${workspaceFolder}/apps/api/.env",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        }
+    ]
+}

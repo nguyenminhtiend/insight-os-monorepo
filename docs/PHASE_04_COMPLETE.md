@@ -189,3 +189,4 @@ curl -X POST http://localhost:3001/embeddings/store \
 
 The vector search infrastructure is fully operational and ready for Phase 5 RAG ingestion!
 
+
