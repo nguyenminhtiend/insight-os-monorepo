@@ -23,6 +23,10 @@
     "./nodes": {
       "types": "./src/nodes/index.ts",
       "default": "./src/nodes/index.ts"
+    },
+    "./hitl": {
+      "types": "./src/hitl/index.ts",
+      "default": "./src/hitl/index.ts"
     }
   },
   "scripts": {

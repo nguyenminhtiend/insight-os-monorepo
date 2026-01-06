@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import { stream } from 'hono/streaming';
 import { runResearchAgent, streamResearchAgent } from '@insight-os/ai-engine/agents';
-import { runResearchWorkflow, streamResearchWorkflow } from '@insight-os/ai-engine/graphs';
+import { runResearchWorkflow, streamResearchWorkflow, runHITLWorkflow, resumeHITLWorkflow } from '@insight-os/ai-engine/graphs';
 import { allTools } from '@insight-os/ai-engine/tools';
+import { getPendingApprovals, resolveApproval } from '@insight-os/ai-engine/hitl';
 import { createResponse, createErrorResponse } from '@insight-os/shared';
 
 export const agentsRoutes = new Hono();
@@ -170,5 +171,76 @@ agentsRoutes.post('/workflow/research/stream', async (c) => {
   } catch (error) {
     console.error('Stream error:', error);
     return c.json(createErrorResponse('Stream failed'), 500);
+  }
+});
+
+/**
+ * GET /agents/approvals
+ * List pending approval requests
+ */
+agentsRoutes.get('/approvals', (c) => {
+  const workflowId = c.req.query('workflowId');
+  const approvals = getPendingApprovals(workflowId);
+  return c.json(createResponse({ approvals }));
+});
+
+/**
+ * POST /agents/approvals/:id/resolve
+ * Approve or reject a pending request
+ */
+agentsRoutes.post('/approvals/:id/resolve', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const { approved, feedback } = await c.req.json<{
+      approved: boolean;
+      feedback?: string;
+    }>();
+
+    const result = await resolveApproval(id, approved, 'user', feedback);
+
+    if (!result) {
+      return c.json(createErrorResponse('Approval request not found'), 404);
+    }
+
+    return c.json(createResponse(result));
+  } catch (error) {
+    return c.json(createErrorResponse('Failed to resolve approval'), 500);
+  }
+});
+
+/**
+ * POST /agents/workflow/hitl
+ * Run workflow with human-in-the-loop
+ */
+agentsRoutes.post('/workflow/hitl', async (c) => {
+  try {
+    const { query, threadId } = await c.req.json<{
+      query: string;
+      threadId?: string;
+    }>();
+
+    const result = await runHITLWorkflow(query, threadId);
+    return c.json(createResponse(result));
+  } catch (error) {
+    console.error('HITL workflow error:', error);
+    return c.json(createErrorResponse('Workflow failed'), 500);
+  }
+});
+
+/**
+ * POST /agents/workflow/hitl/resume
+ * Resume workflow after approval
+ */
+agentsRoutes.post('/workflow/hitl/resume', async (c) => {
+  try {
+    const { threadId, approved } = await c.req.json<{
+      threadId: string;
+      approved: boolean;
+    }>();
+
+    const result = await resumeHITLWorkflow('', threadId, approved);
+    return c.json(createResponse(result));
+  } catch (error) {
+    return c.json(createErrorResponse('Resume failed'), 500);
   }
 });
