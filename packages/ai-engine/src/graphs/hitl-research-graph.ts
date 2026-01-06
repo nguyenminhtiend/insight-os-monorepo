@@ -10,7 +10,7 @@ import { saveCheckpoint, loadCheckpoint } from '../hitl/checkpoint.js';
 /**
  * Approval gate node - pauses for human approval when needed
  */
-async function approvalGateNode(
+export async function approvalGateNode(
   state: ResearchStateType,
   config?: RunnableConfig,
 ): Promise<Partial<ResearchStateType>> {
@@ -52,7 +52,7 @@ async function approvalGateNode(
 /**
  * Checkpoint node - saves state before risky operations
  */
-async function checkpointNode(
+export async function checkpointNode(
   state: ResearchStateType,
   config?: RunnableConfig,
 ): Promise<Partial<ResearchStateType>> {
@@ -67,6 +67,9 @@ async function checkpointNode(
 
 /**
  * Create HITL-enabled research graph
+ */
+/**
+ * Run HITL workflow with approval handling
  */
 export function createHITLResearchGraph() {
   const graph = new StateGraph(ResearchState)
