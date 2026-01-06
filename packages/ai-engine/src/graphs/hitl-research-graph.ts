@@ -1,4 +1,5 @@
 import { StateGraph, END, START, interrupt } from '@langchain/langgraph';
+import type { RunnableConfig } from '@langchain/core/runnables';
 import { ResearchState, type ResearchStateType } from './state.js';
 import { plannerNode, replannerNode } from '../nodes/planner.js';
 import { executorNode, analyzerNode } from '../nodes/executor.js';
@@ -9,19 +10,23 @@ import { saveCheckpoint, loadCheckpoint } from '../hitl/checkpoint.js';
 /**
  * Approval gate node - pauses for human approval when needed
  */
-async function approvalGateNode(state: ResearchStateType): Promise<Partial<ResearchStateType>> {
+async function approvalGateNode(
+  state: ResearchStateType,
+  config?: RunnableConfig,
+): Promise<Partial<ResearchStateType>> {
   const currentStep = state.plan[state.currentStep];
+  const threadId = config?.configurable?.thread_id || state.query;
 
   // Check if this step needs approval
   if (needsApproval(currentStep, 'medium')) {
     console.log('[ApprovalGate] Requesting approval for:', currentStep);
 
     const request = await requestApproval(
-      state.query, // workflowId
+      threadId, // workflowId
       currentStep,
       `Execute research step: ${currentStep}`,
       { step: state.currentStep, query: state.query },
-      'medium'
+      'medium',
     );
 
     // Use LangGraph interrupt for human-in-the-loop
@@ -29,14 +34,14 @@ async function approvalGateNode(state: ResearchStateType): Promise<Partial<Resea
       type: 'approval_required',
       requestId: request.id,
       action: currentStep,
-      description: request.description
+      description: request.description,
     });
 
     // After interrupt resumes, check approval status
     if (!approval?.approved) {
       return {
         shouldRevise: false,
-        finalAnswer: 'Workflow cancelled by user.'
+        finalAnswer: 'Workflow cancelled by user.',
       };
     }
   }
@@ -47,9 +52,14 @@ async function approvalGateNode(state: ResearchStateType): Promise<Partial<Resea
 /**
  * Checkpoint node - saves state before risky operations
  */
-async function checkpointNode(state: ResearchStateType): Promise<Partial<ResearchStateType>> {
-  await saveCheckpoint(state.query, 'checkpoint', {
-    ...state
+async function checkpointNode(
+  state: ResearchStateType,
+  config?: RunnableConfig,
+): Promise<Partial<ResearchStateType>> {
+  const threadId = config?.configurable?.thread_id || state.query;
+
+  await saveCheckpoint(threadId, 'checkpoint', {
+    ...state,
   });
 
   return {};
@@ -74,7 +84,7 @@ export function createHITLResearchGraph() {
     .addEdge('checkpoint', 'approval_gate')
     .addEdge('approval_gate', 'executor')
     .addConditionalEdges('executor', (state) =>
-      state.currentStep < state.plan.length ? 'approval_gate' : 'analyzer'
+      state.currentStep < state.plan.length ? 'approval_gate' : 'analyzer',
     )
     .addEdge('analyzer', 'reflector')
     .addConditionalEdges('reflector', (state) => (state.shouldRevise ? 'replanner' : 'finalizer'))
@@ -83,7 +93,7 @@ export function createHITLResearchGraph() {
 
   // Compile without checkpointer for now (would need MemorySaver or similar)
   return graph.compile({
-    interruptBefore: ['approval_gate'] // Interrupt before approval
+    interruptBefore: ['approval_gate'], // Interrupt before approval
   });
 }
 
@@ -92,30 +102,33 @@ export function createHITLResearchGraph() {
  */
 export async function runHITLWorkflow(
   query: string,
-  threadId?: string
+  threadId?: string,
 ): Promise<{
   answer: string;
   requiresApproval: boolean;
   pendingApprovalId?: string;
+  threadId: string;
 }> {
   const graph = createHITLResearchGraph();
 
+  // Generate a unique thread ID if one isn't provided
+  const activeThreadId = threadId || `run_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
   try {
-    const result = await graph.invoke(
-      { query },
-      { configurable: { thread_id: threadId || query } }
-    );
+    const result = await graph.invoke({ query }, { configurable: { thread_id: activeThreadId } });
 
     return {
       answer: result.finalAnswer,
-      requiresApproval: false
+      requiresApproval: false,
+      threadId: activeThreadId,
     };
   } catch (error: any) {
     if (error.type === 'interrupt') {
       return {
         answer: '',
         requiresApproval: true,
-        pendingApprovalId: error.value?.requestId
+        pendingApprovalId: error.value?.requestId,
+        threadId: activeThreadId,
       };
     }
     throw error;
@@ -128,17 +141,16 @@ export async function runHITLWorkflow(
 export async function resumeHITLWorkflow(
   query: string,
   threadId: string,
-  approved: boolean
+  approved: boolean,
 ): Promise<{ answer: string }> {
   const graph = createHITLResearchGraph();
 
   const result = await graph.invoke(
     null, // No new input, resume from checkpoint
     {
-      configurable: { thread_id: threadId }
-    }
+      configurable: { thread_id: threadId },
+    },
   );
 
   return { answer: result.finalAnswer };
 }
-
