@@ -92,9 +92,7 @@ export function createHITLResearchGraph() {
     .addEdge('finalizer', END);
 
   // Compile without checkpointer for now (would need MemorySaver or similar)
-  return graph.compile({
-    interruptBefore: ['approval_gate'], // Interrupt before approval
-  });
+  return graph.compile();
 }
 
 /**
