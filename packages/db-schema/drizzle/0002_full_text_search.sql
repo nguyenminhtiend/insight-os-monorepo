@@ -15,3 +15,4 @@ CREATE INDEX IF NOT EXISTS chunks_content_fts_idx
 ON document_chunks USING gin (content_tsv);
 
 
+

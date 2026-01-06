@@ -13,12 +13,12 @@
 
 ## Tech Stack Focus
 
-| Concept | Purpose |
-|---------|---------|
+| Concept              | Purpose                      |
+| -------------------- | ---------------------------- |
 | LangGraph StateGraph | Define agent workflow graphs |
-| Conditional edges | Route based on state |
-| Reflection pattern | Self-critique and improve |
-| Checkpointing | State persistence |
+| Conditional edges    | Route based on state         |
+| Reflection pattern   | Self-critique and improve    |
+| Checkpointing        | State persistence            |
 
 ---
 
@@ -171,7 +171,7 @@ export async function plannerNode(state: ResearchStateType): Promise<Partial<Res
   console.log('[Planner] Creating research plan for:', state.query);
 
   const { object } = await generateObject({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     schema: PlanSchema,
     prompt: `Create a research plan for this query: "${state.query}"
 
@@ -199,7 +199,7 @@ export async function replannerNode(state: ResearchStateType): Promise<Partial<R
   console.log('[Replanner] Revising plan based on critique');
 
   const { object } = await generateObject({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     schema: PlanSchema,
     prompt: `Revise this research plan based on the critique.
 
@@ -238,7 +238,7 @@ export async function executorNode(state: ResearchStateType): Promise<Partial<Re
 
   // Simulate search/research for the step
   const result = await generateText({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     prompt: `Execute this research step: "${currentStep}"
 
 Query context: "${state.query}"
@@ -262,7 +262,7 @@ export async function analyzerNode(state: ResearchStateType): Promise<Partial<Re
   console.log('[Analyzer] Synthesizing research findings');
 
   const result = await generateText({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     prompt: `Synthesize these research findings into a comprehensive analysis.
 
 Original query: "${state.query}"
@@ -305,7 +305,7 @@ export async function reflectorNode(state: ResearchStateType): Promise<Partial<R
   console.log('[Reflector] Evaluating analysis quality');
 
   const { object } = await generateObject({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     schema: ReflectionSchema,
     prompt: `Evaluate this research analysis for quality and completeness.
 
@@ -348,7 +348,7 @@ export async function finalizerNode(state: ResearchStateType): Promise<Partial<R
   console.log('[Finalizer] Producing final answer');
 
   const result = await generateText({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     prompt: `Create the final answer based on this analysis.
 
 Query: "${state.query}"
@@ -495,10 +495,7 @@ export * from './research-graph.js';
 
 ```typescript
 // Add new imports
-import {
-  runResearchWorkflow,
-  streamResearchWorkflow,
-} from '@insight-os/ai-engine/graphs';
+import { runResearchWorkflow, streamResearchWorkflow } from '@insight-os/ai-engine/graphs';
 
 /**
  * POST /agents/workflow/research
@@ -605,7 +602,7 @@ graph TD
 ## What's Next
 
 **Phase 10: Human-in-the-Loop** will add:
+
 - Approval gates for risky actions
 - Checkpoint/resume functionality
 - Human feedback integration
-

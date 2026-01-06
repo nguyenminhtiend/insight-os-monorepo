@@ -178,7 +178,7 @@ Structure your responses with clear sections and bullet points.`,
 // Model options for different use cases
 export const MODELS = {
   fast: 'gpt-4o-mini', // Quick responses, lower cost
-  smart: 'gpt-4o', // Complex analysis
+  smart: 'gpt-4o-mini', // Complex analysis
   reasoning: 'o1-mini', // Deep reasoning tasks
 } as const;
 

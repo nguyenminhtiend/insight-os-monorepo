@@ -8,3 +8,4 @@ ON document_chunks
 USING hnsw (embedding vector_cosine_ops);
 
 
+

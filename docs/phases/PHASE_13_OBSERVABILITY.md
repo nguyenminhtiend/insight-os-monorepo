@@ -40,7 +40,7 @@ import { Langfuse } from 'langfuse';
 export const langfuse = new Langfuse({
   secretKey: process.env.LANGFUSE_SECRET_KEY,
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-  baseUrl: process.env.LANGFUSE_BASEURL || 'https://cloud.langfuse.com'
+  baseUrl: process.env.LANGFUSE_BASEURL || 'https://cloud.langfuse.com',
 });
 
 // Ensure traces are flushed on shutdown
@@ -55,7 +55,7 @@ export function createTrace(name: string, metadata?: Record<string, unknown>) {
   return langfuse.trace({
     name,
     metadata,
-    timestamp: new Date()
+    timestamp: new Date(),
   });
 }
 
@@ -70,28 +70,28 @@ export async function tracedLLMCall<T>(
     model?: string;
     input?: unknown;
     promptTemplate?: string;
-  }
+  },
 ): Promise<T> {
   const generation = trace.generation({
     name,
     model: metadata?.model,
     input: metadata?.input,
     metadata: { promptTemplate: metadata?.promptTemplate },
-    startTime: new Date()
+    startTime: new Date(),
   });
 
   try {
     const result = await fn();
     generation.end({
       output: result,
-      endTime: new Date()
+      endTime: new Date(),
     });
     return result;
   } catch (error) {
     generation.end({
       statusMessage: error instanceof Error ? error.message : 'Unknown error',
       level: 'ERROR',
-      endTime: new Date()
+      endTime: new Date(),
     });
     throw error;
   }
@@ -104,7 +104,7 @@ export function createSpan(trace: ReturnType<typeof createTrace>, name: string, 
   return trace.span({
     name,
     input,
-    startTime: new Date()
+    startTime: new Date(),
   });
 }
 
@@ -118,16 +118,16 @@ export function trackUsage(
     completionTokens: number;
     totalTokens: number;
   },
-  model: string
+  model: string,
 ) {
   generation.update({
     usage: {
       input: usage.promptTokens,
       output: usage.completionTokens,
       total: usage.totalTokens,
-      unit: 'TOKENS'
+      unit: 'TOKENS',
     },
-    model
+    model,
   });
 }
 
@@ -138,12 +138,12 @@ export function logScore(
   trace: ReturnType<typeof createTrace>,
   name: string,
   value: number,
-  comment?: string
+  comment?: string,
 ) {
   trace.score({
     name,
     value,
-    comment
+    comment,
   });
 }
 ```
@@ -157,15 +157,15 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createTrace, tracedLLMCall } from './observability.js';
 
 export const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export const DEFAULT_MODEL = 'gpt-4o-mini';
 
 export const MODELS = {
   fast: 'gpt-4o-mini',
-  smart: 'gpt-4o',
-  reasoning: 'o1-mini'
+  smart: 'gpt-4o-mini',
+  reasoning: 'o1-mini',
 } as const;
 
 /**
@@ -179,7 +179,7 @@ export async function tracedGenerateText(
     prompt: string;
     temperature?: number;
     maxTokens?: number;
-  }
+  },
 ) {
   const trace = createTrace(traceName);
 
@@ -193,13 +193,13 @@ export async function tracedGenerateText(
         system: options.system,
         prompt: options.prompt,
         temperature: options.temperature,
-        maxTokens: options.maxTokens
+        maxTokens: options.maxTokens,
       });
     },
     {
       model: options.model,
-      input: { system: options.system, prompt: options.prompt }
-    }
+      input: { system: options.system, prompt: options.prompt },
+    },
   );
 
   return { result, trace };
@@ -218,7 +218,7 @@ export const tracingMiddleware = createMiddleware(async (c, next) => {
   const trace = createTrace(`${c.req.method} ${c.req.path}`, {
     method: c.req.method,
     path: c.req.path,
-    userAgent: c.req.header('user-agent')
+    userAgent: c.req.header('user-agent'),
   });
 
   // Attach trace to context
@@ -233,15 +233,15 @@ export const tracingMiddleware = createMiddleware(async (c, next) => {
     trace.update({
       metadata: {
         statusCode: c.res.status,
-        duration
-      }
+        duration,
+      },
     });
   } catch (error) {
     trace.update({
       metadata: {
         error: error instanceof Error ? error.message : 'Unknown error',
-        statusCode: 500
-      }
+        statusCode: 500,
+      },
     });
     throw error;
   }
@@ -265,12 +265,12 @@ const metrics = {
   llmCalls: 0,
   tokens: { prompt: 0, completion: 0 },
   errors: 0,
-  latency: [] as number[]
+  latency: [] as number[],
 };
 
 export function recordMetric(
   type: 'request' | 'llm_call' | 'error',
-  data?: { tokens?: { prompt: number; completion: number }; latency?: number }
+  data?: { tokens?: { prompt: number; completion: number }; latency?: number },
 ) {
   switch (type) {
     case 'request':
@@ -303,8 +303,8 @@ metricsRoutes.get('/', (c) => {
       tokens: metrics.tokens,
       estimatedCost: calculateCost(metrics.tokens),
       errors: metrics.errors,
-      avgLatencyMs: avgLatency.toFixed(2)
-    })
+      avgLatencyMs: avgLatency.toFixed(2),
+    }),
   );
 });
 

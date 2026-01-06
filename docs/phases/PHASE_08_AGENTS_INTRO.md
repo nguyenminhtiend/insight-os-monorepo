@@ -13,11 +13,11 @@
 
 ## Tech Stack Additions
 
-| Tool | Purpose |
-|------|---------|
-| LangGraph.js | Agent orchestration framework |
-| Tool calling | Function calling with structured outputs |
-| State management | Graph-based state machine |
+| Tool             | Purpose                                  |
+| ---------------- | ---------------------------------------- |
+| LangGraph.js     | Agent orchestration framework            |
+| Tool calling     | Function calling with structured outputs |
+| State management | Graph-based state machine                |
 
 ---
 
@@ -178,10 +178,12 @@ import { z } from 'zod';
  * Company analysis tool
  */
 export const analyzeCompanyTool = tool({
-  description: 'Analyze a company to get key information about their business, market position, and performance',
+  description:
+    'Analyze a company to get key information about their business, market position, and performance',
   parameters: z.object({
     company: z.string().describe('Company name to analyze'),
-    aspects: z.array(z.enum(['overview', 'financials', 'competitors', 'products', 'news']))
+    aspects: z
+      .array(z.enum(['overview', 'financials', 'competitors', 'products', 'news']))
       .optional()
       .default(['overview'])
       .describe('Aspects to analyze'),
@@ -205,7 +207,11 @@ export const analyzeTrendTool = tool({
   description: 'Analyze a market trend to understand its impact and trajectory',
   parameters: z.object({
     trend: z.string().describe('The trend to analyze'),
-    timeframe: z.enum(['short', 'medium', 'long']).optional().default('medium').describe('Analysis timeframe'),
+    timeframe: z
+      .enum(['short', 'medium', 'long'])
+      .optional()
+      .default('medium')
+      .describe('Analysis timeframe'),
   }),
   execute: async ({ trend, timeframe }) => {
     console.log(`[Tool] Analyzing trend: ${trend}, timeframe: ${timeframe}`);
@@ -370,9 +376,7 @@ export async function runResearchAgent(task: ResearchTask): Promise<ResearchResu
 
   // Select tools
   const selectedTools = toolNames
-    ? Object.fromEntries(
-        Object.entries(allTools).filter(([name]) => toolNames.includes(name))
-      )
+    ? Object.fromEntries(Object.entries(allTools).filter(([name]) => toolNames.includes(name)))
     : allTools;
 
   const steps: ResearchResult['steps'] = [];
@@ -382,7 +386,7 @@ export async function runResearchAgent(task: ResearchTask): Promise<ResearchResu
 
   // Initial generation with tools
   const result = await generateText({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     system: RESEARCH_SYSTEM_PROMPT,
     prompt: query,
     tools: selectedTools,
@@ -444,7 +448,7 @@ export async function* streamResearchAgent(task: ResearchTask): AsyncGenerator<{
   yield { type: 'thought', content: `Starting research on: "${query}"` };
 
   const result = await generateText({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     system: RESEARCH_SYSTEM_PROMPT,
     prompt: query,
     tools: allTools,
@@ -584,11 +588,13 @@ agentsRoutes.post('/tool/execute', async (c) => {
     // Execute tool
     const result = await (tool as any).execute(args);
 
-    return c.json(createResponse({
-      tool: toolName,
-      args,
-      result,
-    }));
+    return c.json(
+      createResponse({
+        tool: toolName,
+        args,
+        result,
+      }),
+    );
   } catch (error) {
     console.error('Tool execution error:', error);
     return c.json(createErrorResponse('Tool execution failed'), 500);
@@ -645,8 +651,8 @@ curl -X POST http://localhost:3001/agents/research/stream \
 ## What's Next
 
 **Phase 9: Agent Workflows** will add:
+
 - LangGraph state machines
 - Cyclic workflows (Plan → Act → Reflect)
 - Reflection pattern
 - Multi-step reasoning
-

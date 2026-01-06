@@ -22,8 +22,8 @@ Structure your responses with clear sections and bullet points.`,
 // Model options for different use cases
 export const MODELS = {
   fast: 'gpt-4o-mini', // Quick responses, lower cost
-  smart: 'gpt-4o', // Complex analysis
-  reasoning: 'gpt-4o', // Deep reasoning tasks (using gpt-4o since o1 models have limited availability)
+  smart: 'gpt-4o-mini', // Complex analysis
+  reasoning: 'gpt-4o-mini', // Deep reasoning tasks (using gpt-4o since o1 models have limited availability)
 } as const;
 
 export type ModelType = keyof typeof MODELS;

@@ -187,7 +187,7 @@ async function runAgent(
     .join('\n');
 
   const result = await generateText({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     system: agent.systemPrompt,
     prompt: `${conversationHistory}\n\nCurrent request: ${input}`,
     tools: {

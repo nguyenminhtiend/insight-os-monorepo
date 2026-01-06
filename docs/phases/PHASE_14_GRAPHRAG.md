@@ -62,10 +62,7 @@ export function getDriver(): Driver {
   if (!driver) {
     driver = neo4j.driver(
       process.env.NEO4J_URI || 'bolt://localhost:7687',
-      neo4j.auth.basic(
-        process.env.NEO4J_USER || 'neo4j',
-        process.env.NEO4J_PASSWORD || 'password'
-      )
+      neo4j.auth.basic(process.env.NEO4J_USER || 'neo4j', process.env.NEO4J_PASSWORD || 'password'),
     );
   }
   return driver;
@@ -105,17 +102,21 @@ import { getSession } from './client.js';
 const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const EntitySchema = z.object({
-  entities: z.array(z.object({
-    name: z.string(),
-    type: z.enum(['Company', 'Person', 'Product', 'Technology', 'Market', 'Location', 'Event']),
-    properties: z.record(z.string()).optional(),
-  })),
-  relationships: z.array(z.object({
-    source: z.string(),
-    target: z.string(),
-    type: z.string(),
-    properties: z.record(z.string()).optional(),
-  })),
+  entities: z.array(
+    z.object({
+      name: z.string(),
+      type: z.enum(['Company', 'Person', 'Product', 'Technology', 'Market', 'Location', 'Event']),
+      properties: z.record(z.string()).optional(),
+    }),
+  ),
+  relationships: z.array(
+    z.object({
+      source: z.string(),
+      target: z.string(),
+      type: z.string(),
+      properties: z.record(z.string()).optional(),
+    }),
+  ),
 });
 
 export type ExtractedGraph = z.infer<typeof EntitySchema>;
@@ -125,7 +126,7 @@ export type ExtractedGraph = z.infer<typeof EntitySchema>;
  */
 export async function extractEntities(text: string): Promise<ExtractedGraph> {
   const { object } = await generateObject({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     schema: EntitySchema,
     prompt: `Extract entities and relationships from this text.
 
@@ -147,7 +148,7 @@ Extract all relevant entities and their relationships.`,
  */
 export async function storeGraph(
   graph: ExtractedGraph,
-  sourceId: string
+  sourceId: string,
 ): Promise<{ nodesCreated: number; relationshipsCreated: number }> {
   const session = getSession();
 
@@ -166,7 +167,7 @@ export async function storeGraph(
           name: entity.name,
           properties: entity.properties || {},
           sourceId,
-        }
+        },
       );
       if (result.summary.counters.updates().nodesCreated > 0) {
         nodesCreated++;
@@ -185,7 +186,7 @@ export async function storeGraph(
           target: rel.target,
           properties: rel.properties || {},
           sourceId,
-        }
+        },
       );
       if (result.summary.counters.updates().relationshipsCreated > 0) {
         relationshipsCreated++;
@@ -227,7 +228,7 @@ export interface GraphContext {
  */
 export async function getRelatedEntities(
   entityName: string,
-  depth: number = 2
+  depth: number = 2,
 ): Promise<GraphContext> {
   const session = getSession();
 
@@ -236,7 +237,7 @@ export async function getRelatedEntities(
       `MATCH path = (e {name: $name})-[*1..${depth}]-(related)
        RETURN e, relationships(path) as rels, nodes(path) as nodes
        LIMIT 50`,
-      { name: entityName }
+      { name: entityName },
     );
 
     const nodes: GraphNode[] = [];
@@ -296,7 +297,7 @@ export async function searchGraph(query: string): Promise<GraphContext> {
        MATCH (node)-[r]-(related)
        RETURN node, collect(distinct r) as rels, collect(distinct related) as related
        LIMIT 20`,
-      { query }
+      { query },
     );
 
     const nodes: GraphNode[] = [];
@@ -339,7 +340,7 @@ export async function searchGraph(query: string): Promise<GraphContext> {
  */
 export async function graphRAGRetrieve(
   query: string,
-  vectorResults: Array<{ content: string; entities?: string[] }>
+  vectorResults: Array<{ content: string; entities?: string[] }>,
 ): Promise<{
   vectorContext: string;
   graphContext: string;
@@ -478,7 +479,7 @@ FOR (n:Company|Person|Product|Technology) ON EACH [n.name];
 ## What's Next
 
 **Phase 15: Multi-Agent Swarm** will add:
+
 - Agent handoffs
 - Swarm orchestration
 - Multi-agent collaboration
-
