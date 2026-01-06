@@ -45,9 +45,7 @@ export async function runResearchAgent(task: ResearchTask): Promise<ResearchResu
 
   // Select tools
   const selectedTools = toolNames
-    ? Object.fromEntries(
-        Object.entries(allTools).filter(([name]) => toolNames.includes(name))
-      )
+    ? Object.fromEntries(Object.entries(allTools).filter(([name]) => toolNames.includes(name)))
     : allTools;
 
   const steps: ResearchResult['steps'] = [];
@@ -57,7 +55,7 @@ export async function runResearchAgent(task: ResearchTask): Promise<ResearchResu
 
   // Initial generation with tools
   const result = await generateText({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     system: RESEARCH_SYSTEM_PROMPT,
     prompt: query,
     tools: selectedTools,
@@ -119,7 +117,7 @@ export async function* streamResearchAgent(task: ResearchTask): AsyncGenerator<{
   yield { type: 'thought', content: `Starting research on: "${query}"` };
 
   const result = await generateText({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     system: RESEARCH_SYSTEM_PROMPT,
     prompt: query,
     tools: allTools,
@@ -129,5 +127,3 @@ export async function* streamResearchAgent(task: ResearchTask): AsyncGenerator<{
   // In a real implementation, you'd yield intermediate steps
   yield { type: 'answer', content: result.text };
 }
-
-

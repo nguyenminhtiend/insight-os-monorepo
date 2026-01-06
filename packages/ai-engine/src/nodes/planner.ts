@@ -17,7 +17,7 @@ export async function plannerNode(state: ResearchStateType): Promise<Partial<Res
   console.log('[Planner] Creating research plan for:', state.query);
 
   const { object } = await generateObject({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     schema: PlanSchema,
     prompt: `Create a research plan for this query: "${state.query}"
 
@@ -45,7 +45,7 @@ export async function replannerNode(state: ResearchStateType): Promise<Partial<R
   console.log('[Replanner] Revising plan based on critique');
 
   const { object } = await generateObject({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     schema: PlanSchema,
     prompt: `You are a Research Director.
 Original query: "${state.query}"

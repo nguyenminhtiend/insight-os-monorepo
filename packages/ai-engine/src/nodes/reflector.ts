@@ -19,7 +19,7 @@ export async function reflectorNode(state: ResearchStateType): Promise<Partial<R
   console.log('[Reflector] Evaluating analysis quality');
 
   const { object } = await generateObject({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     schema: ReflectionSchema,
     prompt: `Evaluate this research analysis for quality and completeness.
 
@@ -62,7 +62,7 @@ export async function finalizerNode(state: ResearchStateType): Promise<Partial<R
   console.log('[Finalizer] Producing final answer');
 
   const result = await generateText({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     prompt: `Create the final answer based on this analysis.
 
 Query: "${state.query}"
@@ -82,4 +82,3 @@ Provide a clear, well-structured final answer. Include key findings and confiden
     shouldRevise: false,
   };
 }
-

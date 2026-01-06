@@ -13,7 +13,7 @@ export async function executorNode(state: ResearchStateType): Promise<Partial<Re
 
   // Simulate search/research for the step
   const result = await generateText({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     prompt: `Execute this research step: "${currentStep}"
 
 Query context: "${state.query}"
@@ -38,7 +38,7 @@ export async function analyzerNode(state: ResearchStateType): Promise<Partial<Re
   console.log('[Analyzer] Synthesizing research findings');
 
   const result = await generateText({
-    model: openai('gpt-4o'),
+    model: openai('gpt-4o-mini'),
     prompt: `Synthesize these research findings into a comprehensive analysis.
 
 Original query: "${state.query}"
