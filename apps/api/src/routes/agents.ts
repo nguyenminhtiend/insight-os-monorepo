@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { stream } from 'hono/streaming';
 import { runResearchAgent, streamResearchAgent } from '@insight-os/ai-engine/agents';
+import { runResearchWorkflow, streamResearchWorkflow } from '@insight-os/ai-engine/graphs';
 import { allTools } from '@insight-os/ai-engine/tools';
 import { createResponse, createErrorResponse } from '@insight-os/shared';
 
@@ -15,7 +16,7 @@ agentsRoutes.get('/tools', (c) => {
   const tools = Object.entries(allTools).map(([name, tool]) => ({
     name,
     description: tool.description,
-    parameters: tool.parameters,
+    parameters: tool.parameters
   }));
 
   return c.json(createResponse({ tools }));
@@ -40,7 +41,7 @@ agentsRoutes.post('/research', async (c) => {
     const result = await runResearchAgent({
       query,
       maxIterations,
-      tools,
+      tools
     });
 
     return c.json(createResponse(result));
@@ -111,8 +112,8 @@ agentsRoutes.post('/tool/execute', async (c) => {
       createResponse({
         tool: toolName,
         args,
-        result,
-      }),
+        result
+      })
     );
   } catch (error) {
     console.error('Tool execution error:', error);
@@ -120,3 +121,54 @@ agentsRoutes.post('/tool/execute', async (c) => {
   }
 });
 
+/**
+ * POST /agents/workflow/research
+ * Run Plan→Act→Reflect research workflow
+ */
+agentsRoutes.post('/workflow/research', async (c) => {
+  try {
+    const { query } = await c.req.json<{ query: string }>();
+
+    if (!query) {
+      return c.json(createErrorResponse('Query is required'), 400);
+    }
+
+    const result = await runResearchWorkflow(query);
+
+    return c.json(createResponse(result));
+  } catch (error) {
+    console.error('Workflow error:', error);
+    return c.json(createErrorResponse('Workflow execution failed'), 500);
+  }
+});
+
+/**
+ * POST /agents/workflow/research/stream
+ * Stream workflow execution
+ */
+agentsRoutes.post('/workflow/research/stream', async (c) => {
+  try {
+    const { query } = await c.req.json<{ query: string }>();
+
+    if (!query) {
+      return c.json(createErrorResponse('Query is required'), 400);
+    }
+
+    c.header('Content-Type', 'text/event-stream');
+    c.header('Cache-Control', 'no-cache');
+    c.header('Connection', 'keep-alive');
+
+    return stream(c, async (stream) => {
+      const generator = streamResearchWorkflow(query);
+
+      for await (const event of generator) {
+        await stream.write(`data: ${JSON.stringify(event)}\n\n`);
+      }
+
+      await stream.write('data: [DONE]\n\n');
+    });
+  } catch (error) {
+    console.error('Stream error:', error);
+    return c.json(createErrorResponse('Stream failed'), 500);
+  }
+});
