@@ -12,6 +12,7 @@ import { documentsRoutes } from './routes/documents.js';
 import { ragRoutes } from './routes/rag.js';
 import { agentsRoutes } from './routes/agents.js';
 import { memoryRoutes } from './routes/memory.js';
+import { jobsRoutes } from './routes/jobs.js';
 import { closeDatabaseConnection } from './db/index.js';
 import { closeRedisConnection } from './lib/redis.js';
 
@@ -37,6 +38,7 @@ app.route('/documents', documentsRoutes);
 app.route('/rag', ragRoutes);
 app.route('/agents', agentsRoutes);
 app.route('/memory', memoryRoutes);
+app.route('/jobs', jobsRoutes);
 
 // Root route
 app.get('/', (c) => {
@@ -70,7 +72,10 @@ app.get('/', (c) => {
       memorySearch: '/memory/:userId/search',
       memoryExtract: '/memory/:userId/extract',
       memoryRelevant: '/memory/:userId/relevant',
-      memoryDelete: '/memory/:userId/:memoryId'
+      memoryDelete: '/memory/:userId/:memoryId',
+      jobsStatus: '/jobs/status',
+      jobsDocuments: '/jobs/documents',
+      jobsGet: '/jobs/:queue/:id'
     }
   });
 });

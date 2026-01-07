@@ -42,3 +42,4 @@ export class BufferMemory {
     return this.messages.map((m) => `${m.role}: ${m.content}`).join('\n');
   }
 }
+

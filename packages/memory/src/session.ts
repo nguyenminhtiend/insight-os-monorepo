@@ -101,3 +101,4 @@ export class SessionMemoryManager {
     await redis.del(this.getKey());
   }
 }
+

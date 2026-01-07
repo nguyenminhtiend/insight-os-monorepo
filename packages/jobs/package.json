@@ -1,0 +1,17 @@
+{
+  "name": "@insight-os/jobs",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./queues": "./src/queues/index.ts",
+    "./workers": "./src/workers/index.ts"
+  },
+  "dependencies": {
+    "bullmq": "^5.0.0",
+    "ioredis": "^5.4.2",
+    "@insight-os/db-schema": "workspace:*"
+  }
+}
+
