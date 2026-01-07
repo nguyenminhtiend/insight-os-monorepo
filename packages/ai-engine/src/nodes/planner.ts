@@ -26,7 +26,7 @@ Consider:
 - What sources should be consulted?
 - What analysis is needed?
 
-Create 3-5 concrete steps.`,
+Create 1-3 concrete steps.`,
     temperature: 0.3,
   });
 

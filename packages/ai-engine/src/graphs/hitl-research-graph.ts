@@ -1,4 +1,4 @@
-import { StateGraph, END, START, interrupt } from '@langchain/langgraph';
+import { StateGraph, END, START, interrupt, Command, MemorySaver } from '@langchain/langgraph';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import { ResearchState, type ResearchStateType } from './state.js';
 import { plannerNode, replannerNode } from '../nodes/planner.js';
@@ -71,6 +71,12 @@ export async function checkpointNode(
 /**
  * Run HITL workflow with approval handling
  */
+// Shared in-memory checkpointer for the server process
+const checkpointer = new MemorySaver();
+
+/**
+ * Run HITL workflow with approval handling
+ */
 export function createHITLResearchGraph() {
   const graph = new StateGraph(ResearchState)
     .addNode('planner', plannerNode)
@@ -94,8 +100,8 @@ export function createHITLResearchGraph() {
     .addEdge('replanner', 'checkpoint')
     .addEdge('finalizer', END);
 
-  // Compile without checkpointer for now (would need MemorySaver or similar)
-  return graph.compile();
+  // Compile with shared checkpointer to persist state
+  return graph.compile({ checkpointer });
 }
 
 /**
@@ -116,7 +122,26 @@ export async function runHITLWorkflow(
   const activeThreadId = threadId || `run_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
   try {
-    const result = await graph.invoke({ query }, { configurable: { thread_id: activeThreadId } });
+    const config = { configurable: { thread_id: activeThreadId } };
+    const result = await graph.invoke({ query }, config);
+
+    // Check if the graph execution was interrupted
+    const state = await graph.getState(config);
+    const interruptTask = state.tasks.find((t) => t.interrupts && t.interrupts.length > 0);
+
+    if (interruptTask) {
+      const interruptValue = interruptTask.interrupts[0].value;
+
+      // Type guard for ApprovalInterrupt
+      if (isApprovalInterrupt(interruptValue)) {
+        return {
+          answer: '',
+          requiresApproval: true,
+          pendingApprovalId: interruptValue.requestId,
+          threadId: activeThreadId,
+        };
+      }
+    }
 
     return {
       answer: result.finalAnswer,
@@ -124,34 +149,45 @@ export async function runHITLWorkflow(
       threadId: activeThreadId,
     };
   } catch (error: any) {
-    if (error.type === 'interrupt') {
-      return {
-        answer: '',
-        requiresApproval: true,
-        pendingApprovalId: error.value?.requestId,
-        threadId: activeThreadId,
-      };
-    }
     throw error;
   }
+}
+
+/**
+ * Interface for the approval interrupt value
+ */
+interface ApprovalInterrupt {
+  type: 'approval_required';
+  requestId: string;
+  action: string;
+  description: string;
+}
+
+/**
+ * Type guard to check if a value is an ApprovalInterrupt
+ */
+function isApprovalInterrupt(value: unknown): value is ApprovalInterrupt {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'type' in value &&
+    (value as ApprovalInterrupt).type === 'approval_required' &&
+    'requestId' in value
+  );
 }
 
 /**
  * Resume workflow after approval
  */
 export async function resumeHITLWorkflow(
-  query: string,
   threadId: string,
   approved: boolean,
 ): Promise<{ answer: string }> {
   const graph = createHITLResearchGraph();
 
-  const result = await graph.invoke(
-    null, // No new input, resume from checkpoint
-    {
-      configurable: { thread_id: threadId },
-    },
-  );
+  const result = await graph.invoke(new Command({ resume: { approved } }), {
+    configurable: { thread_id: threadId },
+  });
 
   return { answer: result.finalAnswer };
 }

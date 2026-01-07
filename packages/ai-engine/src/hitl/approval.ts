@@ -46,13 +46,50 @@ export async function requestApproval(
  * Check if approval is needed based on action and risk
  */
 export function needsApproval(action: string, riskLevel: 'low' | 'medium' | 'high'): boolean {
-  // Define which actions need approval
-  const highRiskActions = ['delete', 'publish', 'send_email', 'make_purchase'];
-  const mediumRiskActions = ['update', 'external_api_call'];
+  const normalizedAction = action.toLowerCase();
 
-  if (highRiskActions.includes(action)) return true;
+  // High risk: Financial, Communication, Destruction -> Always requires approval
+  const highRiskKeywords = [
+    'delete',
+    'destroy',
+    'remove', // Destruction
+    'publish',
+    'post',
+    'broadcast', // Public facing
+    'send',
+    'email',
+    'message', // Communication
+    'buy',
+    'purchase',
+    'pay',
+    'transfer', // Financial
+    'AI',
+  ];
+
+  // Medium risk: Mutation, External interaction -> Requires approval (unless manually set to low risk)
+  const mediumRiskKeywords = [
+    'update',
+    'modify',
+    'change',
+    'edit', // Mutation
+    'upload',
+    'download',
+    'register',
+    'sign up',
+    'login',
+    'auth', // Identity
+    'api',
+    'request',
+    'fetch', // External Data
+  ];
+
+  if (highRiskKeywords.some((keyword) => normalizedAction.includes(keyword))) return true;
   if (riskLevel === 'high') return true;
-  if (mediumRiskActions.includes(action) && riskLevel !== 'low') return true;
+  if (
+    mediumRiskKeywords.some((keyword) => normalizedAction.includes(keyword)) &&
+    riskLevel !== 'low'
+  )
+    return true;
 
   return false;
 }

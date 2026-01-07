@@ -1,7 +1,12 @@
 import { Hono } from 'hono';
 import { stream } from 'hono/streaming';
 import { runResearchAgent, streamResearchAgent } from '@insight-os/ai-engine/agents';
-import { runResearchWorkflow, streamResearchWorkflow, runHITLWorkflow, resumeHITLWorkflow } from '@insight-os/ai-engine/graphs';
+import {
+  runResearchWorkflow,
+  streamResearchWorkflow,
+  runHITLWorkflow,
+  resumeHITLWorkflow,
+} from '@insight-os/ai-engine/graphs';
 import { allTools } from '@insight-os/ai-engine/tools';
 import { getPendingApprovals, resolveApproval } from '@insight-os/ai-engine/hitl';
 import { createResponse, createErrorResponse } from '@insight-os/shared';
@@ -17,7 +22,7 @@ agentsRoutes.get('/tools', (c) => {
   const tools = Object.entries(allTools).map(([name, tool]) => ({
     name,
     description: tool.description,
-    parameters: tool.parameters
+    parameters: tool.parameters,
   }));
 
   return c.json(createResponse({ tools }));
@@ -42,7 +47,7 @@ agentsRoutes.post('/research', async (c) => {
     const result = await runResearchAgent({
       query,
       maxIterations,
-      tools
+      tools,
     });
 
     return c.json(createResponse(result));
@@ -113,8 +118,8 @@ agentsRoutes.post('/tool/execute', async (c) => {
       createResponse({
         tool: toolName,
         args,
-        result
-      })
+        result,
+      }),
     );
   } catch (error) {
     console.error('Tool execution error:', error);
@@ -238,7 +243,7 @@ agentsRoutes.post('/workflow/hitl/resume', async (c) => {
       approved: boolean;
     }>();
 
-    const result = await resumeHITLWorkflow('', threadId, approved);
+    const result = await resumeHITLWorkflow(threadId, approved);
     return c.json(createResponse(result));
   } catch (error) {
     return c.json(createErrorResponse('Resume failed'), 500);

@@ -54,7 +54,7 @@ export async function requestApproval(
   action: string,
   description: string,
   payload: Record<string, unknown>,
-  riskLevel: 'low' | 'medium' | 'high' = 'medium'
+  riskLevel: 'low' | 'medium' | 'high' = 'medium',
 ): Promise<ApprovalRequest> {
   const request: ApprovalRequest = {
     id: `apr_${Date.now()}_${Math.random().toString(36).slice(2)}`,
@@ -64,7 +64,7 @@ export async function requestApproval(
     riskLevel,
     payload,
     status: 'pending',
-    createdAt: new Date()
+    createdAt: new Date(),
   };
 
   approvalRequests.set(request.id, request);
@@ -95,7 +95,7 @@ export async function resolveApproval(
   requestId: string,
   approved: boolean,
   resolvedBy: string,
-  feedback?: string
+  feedback?: string,
 ): Promise<ApprovalRequest | null> {
   const request = approvalRequests.get(requestId);
   if (!request) return null;
@@ -129,7 +129,7 @@ export function getPendingApprovals(workflowId?: string): ApprovalRequest[] {
  */
 export async function waitForApproval(
   requestId: string,
-  timeoutMs: number = 300000 // 5 minutes
+  timeoutMs: number = 300000, // 5 minutes
 ): Promise<ApprovalRequest> {
   const startTime = Date.now();
 
@@ -172,7 +172,7 @@ const CHECKPOINT_TTL = 86400; // 24 hours
 export async function saveCheckpoint(
   workflowId: string,
   nodeName: string,
-  state: Record<string, unknown>
+  state: Record<string, unknown>,
 ): Promise<Checkpoint> {
   const checkpoint: Checkpoint = {
     id: `chk_${Date.now()}`,
@@ -180,7 +180,7 @@ export async function saveCheckpoint(
     nodeName,
     state,
     createdAt: new Date(),
-    expiresAt: new Date(Date.now() + CHECKPOINT_TTL * 1000)
+    expiresAt: new Date(Date.now() + CHECKPOINT_TTL * 1000),
   };
 
   await cacheHelpers.set(`${CHECKPOINT_PREFIX}${workflowId}`, checkpoint, CHECKPOINT_TTL);
@@ -247,7 +247,7 @@ async function approvalGateNode(state: ResearchStateType): Promise<Partial<Resea
       currentStep,
       `Execute research step: ${currentStep}`,
       { step: state.currentStep, query: state.query },
-      'medium'
+      'medium',
     );
 
     // Use LangGraph interrupt for human-in-the-loop
@@ -255,14 +255,14 @@ async function approvalGateNode(state: ResearchStateType): Promise<Partial<Resea
       type: 'approval_required',
       requestId: request.id,
       action: currentStep,
-      description: request.description
+      description: request.description,
     });
 
     // After interrupt resumes, check approval status
     if (!approval?.approved) {
       return {
         shouldRevise: false,
-        finalAnswer: 'Workflow cancelled by user.'
+        finalAnswer: 'Workflow cancelled by user.',
       };
     }
   }
@@ -275,7 +275,7 @@ async function approvalGateNode(state: ResearchStateType): Promise<Partial<Resea
  */
 async function checkpointNode(state: ResearchStateType): Promise<Partial<ResearchStateType>> {
   await saveCheckpoint(state.query, 'checkpoint', {
-    ...state
+    ...state,
   });
 
   return {};
@@ -300,7 +300,7 @@ export function createHITLResearchGraph() {
     .addEdge('checkpoint', 'approval_gate')
     .addEdge('approval_gate', 'executor')
     .addConditionalEdges('executor', (state) =>
-      state.currentStep < state.plan.length ? 'approval_gate' : 'analyzer'
+      state.currentStep < state.plan.length ? 'approval_gate' : 'analyzer',
     )
     .addEdge('analyzer', 'reflector')
     .addConditionalEdges('reflector', (state) => (state.shouldRevise ? 'replanner' : 'finalizer'))
@@ -309,7 +309,7 @@ export function createHITLResearchGraph() {
 
   return graph.compile({
     checkpointer: true, // Enable built-in checkpointing
-    interruptBefore: ['approval_gate'] // Interrupt before approval
+    interruptBefore: ['approval_gate'], // Interrupt before approval
   });
 }
 
@@ -318,7 +318,7 @@ export function createHITLResearchGraph() {
  */
 export async function runHITLWorkflow(
   query: string,
-  threadId?: string
+  threadId?: string,
 ): Promise<{
   answer: string;
   requiresApproval: boolean;
@@ -329,19 +329,19 @@ export async function runHITLWorkflow(
   try {
     const result = await graph.invoke(
       { query },
-      { configurable: { thread_id: threadId || query } }
+      { configurable: { thread_id: threadId || query } },
     );
 
     return {
       answer: result.finalAnswer,
-      requiresApproval: false
+      requiresApproval: false,
     };
   } catch (error: any) {
     if (error.type === 'interrupt') {
       return {
         answer: '',
         requiresApproval: true,
-        pendingApprovalId: error.value?.requestId
+        pendingApprovalId: error.value?.requestId,
       };
     }
     throw error;
@@ -352,9 +352,8 @@ export async function runHITLWorkflow(
  * Resume workflow after approval
  */
 export async function resumeHITLWorkflow(
-  query: string,
   threadId: string,
-  approved: boolean
+  approved: boolean,
 ): Promise<{ answer: string }> {
   const graph = createHITLResearchGraph();
 
@@ -363,8 +362,8 @@ export async function resumeHITLWorkflow(
     {
       configurable: { thread_id: threadId },
       // Pass approval decision
-      interruptData: { approved }
-    }
+      interruptData: { approved },
+    },
   );
 
   return { answer: result.finalAnswer };
@@ -443,7 +442,7 @@ agentsRoutes.post('/workflow/hitl/resume', async (c) => {
       approved: boolean;
     }>();
 
-    const result = await resumeHITLWorkflow('', threadId, approved);
+    const result = await resumeHITLWorkflow(threadId, approved);
     return c.json(createResponse(result));
   } catch (error) {
     return c.json(createErrorResponse('Resume failed'), 500);
