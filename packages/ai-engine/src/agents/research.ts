@@ -127,3 +127,4 @@ export async function* streamResearchAgent(task: ResearchTask): AsyncGenerator<{
   // In a real implementation, you'd yield intermediate steps
   yield { type: 'answer', content: result.text };
 }
+

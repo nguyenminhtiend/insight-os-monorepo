@@ -11,6 +11,7 @@ import { embeddingsRoutes } from './routes/embeddings.js';
 import { documentsRoutes } from './routes/documents.js';
 import { ragRoutes } from './routes/rag.js';
 import { agentsRoutes } from './routes/agents.js';
+import { memoryRoutes } from './routes/memory.js';
 import { closeDatabaseConnection } from './db/index.js';
 import { closeRedisConnection } from './lib/redis.js';
 
@@ -35,12 +36,13 @@ app.route('/embeddings', embeddingsRoutes);
 app.route('/documents', documentsRoutes);
 app.route('/rag', ragRoutes);
 app.route('/agents', agentsRoutes);
+app.route('/memory', memoryRoutes);
 
 // Root route
 app.get('/', (c) => {
   return c.json({
     name: 'InsightOS API',
-    version: '0.0.7',
+    version: '0.0.8',
     endpoints: {
       health: '/health',
       chat: '/chat',
@@ -62,7 +64,13 @@ app.get('/', (c) => {
       agentsTools: '/agents/tools',
       agentsResearch: '/agents/research',
       agentsResearchStream: '/agents/research/stream',
-      agentsToolExecute: '/agents/tool/execute'
+      agentsToolExecute: '/agents/tool/execute',
+      memoryGet: '/memory/:userId',
+      memoryStore: '/memory/:userId',
+      memorySearch: '/memory/:userId/search',
+      memoryExtract: '/memory/:userId/extract',
+      memoryRelevant: '/memory/:userId/relevant',
+      memoryDelete: '/memory/:userId/:memoryId'
     }
   });
 });

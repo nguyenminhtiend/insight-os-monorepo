@@ -173,6 +173,51 @@ export const cache = pgTable(
   (table) => [index('cache_key_idx').on(table.key), index('cache_expires_idx').on(table.expiresAt)]
 );
 
+// User memories table (Phase 11)
+export const userMemories = pgTable(
+  'user_memories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(),
+    type: text('type').notNull(), // 'preference', 'fact', 'learning', 'context'
+    key: text('key').notNull(),
+    value: text('value').notNull(),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+    importance: integer('importance').default(5), // 1-10
+    accessCount: integer('access_count').default(0),
+    lastAccessedAt: timestamp('last_accessed_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull()
+  },
+  (table) => [
+    index('memories_user_idx').on(table.userId),
+    index('memories_type_idx').on(table.type),
+    index('memories_key_idx').on(table.key),
+    index('memories_user_key_idx').on(table.userId, table.key)
+  ]
+);
+
+// Conversation summaries for long-term memory
+export const conversationSummaries = pgTable(
+  'conversation_summaries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    conversationId: uuid('conversation_id').references(() => conversations.id, {
+      onDelete: 'cascade'
+    }),
+    userId: text('user_id').notNull(),
+    summary: text('summary').notNull(),
+    keyTopics: jsonb('key_topics').$type<string[]>(),
+    entities: jsonb('entities').$type<string[]>(),
+    sentiment: text('sentiment'),
+    createdAt: timestamp('created_at').defaultNow().notNull()
+  },
+  (table) => [
+    index('summaries_user_idx').on(table.userId),
+    index('summaries_conversation_idx').on(table.conversationId)
+  ]
+);
+
 // Export table types
 export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;
@@ -184,4 +229,7 @@ export type DocumentChunk = typeof documentChunks.$inferSelect;
 export type NewDocumentChunk = typeof documentChunks.$inferInsert;
 export type AnalysisResult = typeof analysisResults.$inferSelect;
 export type NewAnalysisResult = typeof analysisResults.$inferInsert;
-
+export type UserMemory = typeof userMemories.$inferSelect;
+export type NewUserMemory = typeof userMemories.$inferInsert;
+export type ConversationSummary = typeof conversationSummaries.$inferSelect;
+export type NewConversationSummary = typeof conversationSummaries.$inferInsert;
