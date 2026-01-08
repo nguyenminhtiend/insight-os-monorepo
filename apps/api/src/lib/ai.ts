@@ -1,4 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai';
+import { createTrace, tracedLLMCall } from './observability.js';
 
 // Initialize OpenAI provider
 export const openai = createOpenAI({
@@ -27,3 +28,40 @@ export const MODELS = {
 } as const;
 
 export type ModelType = keyof typeof MODELS;
+
+/**
+ * Traced text generation
+ */
+export async function tracedGenerateText(
+  traceName: string,
+  options: {
+    model: string;
+    system?: string;
+    prompt: string;
+    temperature?: number;
+    maxTokens?: number;
+  },
+): Promise<{ result: any; trace: any }> {
+  const trace = createTrace(traceName);
+
+  const result = await tracedLLMCall(
+    trace,
+    'generateText',
+    async () => {
+      const { generateText } = await import('ai');
+      return generateText({
+        model: openai(options.model),
+        system: options.system,
+        prompt: options.prompt,
+        temperature: options.temperature,
+        ...(options.maxTokens && { maxRetries: options.maxTokens }),
+      });
+    },
+    {
+      model: options.model,
+      input: { system: options.system, prompt: options.prompt },
+    },
+  );
+
+  return { result, trace };
+}

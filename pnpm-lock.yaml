@@ -53,6 +53,9 @@ importers:
       ioredis:
         specifier: ^5.4.2
         version: 5.8.2
+      langfuse:
+        specifier: ^3.38.6
+        version: 3.38.6
       pdf-parse:
         specifier: ^2.4.5
         version: 2.4.5
@@ -2093,6 +2096,14 @@ packages:
     resolution: {integrity: sha512-3QItJOXp2AP1uv7waBkao5nCvhEv+QmJAd38Ybq7wNI74Q+BBmnLn4EDKz6yI9xGAIQoUF87qHt+kc1IVxB4zQ==}
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
+
+  langfuse-core@3.38.6:
+    resolution: {integrity: sha512-EcZXa+DK9FJdi1I30+u19eKjuBJ04du6j2Nybk19KKCuraLczg/ppkTQcGvc4QOk//OAi3qUHrajUuV74RXsBQ==}
+    engines: {node: '>=18'}
+
+  langfuse@3.38.6:
+    resolution: {integrity: sha512-mtwfsNGIYvObRh+NYNGlJQJDiBN+Wr3Hnr++wN25mxuOpSTdXX+JQqVCyAqGL5GD2TAXRZ7COsN42Vmp9krYmg==}
+    engines: {node: '>=18'}
 
   langsmith@0.3.87:
     resolution: {integrity: sha512-XXR1+9INH8YX96FKWc5tie0QixWz6tOqAsAKfcJyPkE0xPep+NDz0IQLR32q4bn10QK3LqD2HN6T3n6z1YLW7Q==}
@@ -4560,6 +4571,14 @@ snapshots:
       '@types/diff-match-patch': 1.0.36
       chalk: 5.6.2
       diff-match-patch: 1.0.5
+
+  langfuse-core@3.38.6:
+    dependencies:
+      mustache: 4.2.0
+
+  langfuse@3.38.6:
+    dependencies:
+      langfuse-core: 3.38.6
 
   langsmith@0.3.87(@opentelemetry/api@1.9.0)(openai@4.104.0(zod@3.25.76)):
     dependencies:

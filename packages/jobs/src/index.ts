@@ -10,7 +10,6 @@ export function startAllWorkers() {
   console.log('[Jobs] Starting workers...');
   const documentWorker = startDocumentWorker();
   const workflowWorker = startWorkflowWorker();
-
+  console.log('[Jobs] Started workers...');
   return { documentWorker, workflowWorker };
 }
-

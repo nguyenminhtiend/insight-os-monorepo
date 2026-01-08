@@ -13,13 +13,17 @@ import { ragRoutes } from './routes/rag.js';
 import { agentsRoutes } from './routes/agents.js';
 import { memoryRoutes } from './routes/memory.js';
 import { jobsRoutes } from './routes/jobs.js';
+import { metricsRoutes } from './routes/metrics.js';
 import { closeDatabaseConnection } from './db/index.js';
 import { closeRedisConnection } from './lib/redis.js';
+import { flushTraces } from './lib/observability.js';
+import { tracingMiddleware } from './middleware/tracing.js';
 
 const app = new Hono();
 
 // Middleware
 app.use('*', logger());
+app.use('*', tracingMiddleware);
 app.use(
   '*',
   cors({
@@ -39,6 +43,7 @@ app.route('/rag', ragRoutes);
 app.route('/agents', agentsRoutes);
 app.route('/memory', memoryRoutes);
 app.route('/jobs', jobsRoutes);
+app.route('/metrics', metricsRoutes);
 
 // Root route
 app.get('/', (c) => {
@@ -75,7 +80,8 @@ app.get('/', (c) => {
       memoryDelete: '/memory/:userId/:memoryId',
       jobsStatus: '/jobs/status',
       jobsDocuments: '/jobs/documents',
-      jobsGet: '/jobs/:queue/:id'
+      jobsGet: '/jobs/:queue/:id',
+      metrics: '/metrics'
     }
   });
 });
@@ -92,7 +98,11 @@ const server = serve({
 // Graceful shutdown
 async function shutdown() {
   console.log('\n🛑 Shutting down...');
-  await Promise.all([closeDatabaseConnection(), closeRedisConnection()]);
+  await Promise.all([
+    closeDatabaseConnection(),
+    closeRedisConnection(),
+    flushTraces()
+  ]);
   process.exit(0);
 }
 
