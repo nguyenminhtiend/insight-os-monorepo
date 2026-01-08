@@ -207,11 +207,6 @@ recordMetric('error');
 ## Configuration
 
 ### Environment Variables
-```env
-LANGFUSE_SECRET_KEY=sk-lf-0c04dea6-fa73-417e-9de9-8e7d89064adc
-LANGFUSE_PUBLIC_KEY=pk-lf-7a723543-effb-4ef5-9a0e-22197af308ba
-LANGFUSE_BASEURL=https://cloud.langfuse.com
-```
 
 ### Cost Calculation
 Current pricing (GPT-4o-mini):
