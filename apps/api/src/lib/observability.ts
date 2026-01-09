@@ -4,7 +4,7 @@ import { Langfuse } from 'langfuse';
 export const langfuse = new Langfuse({
   secretKey: process.env.LANGFUSE_SECRET_KEY,
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-  baseUrl: process.env.LANGFUSE_BASEURL || 'https://cloud.langfuse.com',
+  baseUrl: process.env.LANGFUSE_BASEURL || 'https://cloud.langfuse.com'
 });
 
 // Ensure traces are flushed on shutdown
@@ -19,7 +19,7 @@ export function createTrace(name: string, metadata?: Record<string, unknown>) {
   return langfuse.trace({
     name,
     metadata,
-    timestamp: new Date(),
+    timestamp: new Date()
   });
 }
 
@@ -34,26 +34,26 @@ export async function tracedLLMCall<T>(
     model?: string;
     input?: unknown;
     promptTemplate?: string;
-  },
+  }
 ): Promise<T> {
   const generation = trace.generation({
     name,
     model: metadata?.model,
     input: metadata?.input,
     metadata: { promptTemplate: metadata?.promptTemplate },
-    startTime: new Date(),
+    startTime: new Date()
   });
 
   try {
     const result = await fn();
     generation.end({
-      output: result,
+      output: result
     });
     return result;
   } catch (error) {
     generation.end({
       statusMessage: error instanceof Error ? error.message : 'Unknown error',
-      level: 'ERROR',
+      level: 'ERROR'
     });
     throw error;
   }
@@ -66,7 +66,7 @@ export function createSpan(trace: ReturnType<typeof createTrace>, name: string, 
   return trace.span({
     name,
     input,
-    startTime: new Date(),
+    startTime: new Date()
   });
 }
 
@@ -80,16 +80,16 @@ export function trackUsage(
     completionTokens: number;
     totalTokens: number;
   },
-  model: string,
+  model: string
 ) {
   generation.update({
     usage: {
       input: usage.promptTokens,
       output: usage.completionTokens,
       total: usage.totalTokens,
-      unit: 'TOKENS',
+      unit: 'TOKENS'
     },
-    model,
+    model
   });
 }
 
@@ -100,11 +100,11 @@ export function logScore(
   trace: ReturnType<typeof createTrace>,
   name: string,
   value: number,
-  comment?: string,
+  comment?: string
 ) {
   trace.score({
     name,
     value,
-    comment,
+    comment
   });
 }

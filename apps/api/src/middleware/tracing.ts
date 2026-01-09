@@ -5,7 +5,7 @@ export const tracingMiddleware = createMiddleware(async (c, next) => {
   const trace = createTrace(`${c.req.method} ${c.req.path}`, {
     method: c.req.method,
     path: c.req.path,
-    userAgent: c.req.header('user-agent'),
+    userAgent: c.req.header('user-agent')
   });
 
   // Attach trace to context
@@ -20,15 +20,15 @@ export const tracingMiddleware = createMiddleware(async (c, next) => {
     trace.update({
       metadata: {
         statusCode: c.res.status,
-        duration,
-      },
+        duration
+      }
     });
   } catch (error) {
     trace.update({
       metadata: {
         error: error instanceof Error ? error.message : 'Unknown error',
-        statusCode: 500,
-      },
+        statusCode: 500
+      }
     });
     throw error;
   }
