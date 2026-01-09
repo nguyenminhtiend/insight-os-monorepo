@@ -27,6 +27,10 @@
     "./hitl": {
       "types": "./src/hitl/index.ts",
       "default": "./src/hitl/index.ts"
+    },
+    "./swarm": {
+      "types": "./src/swarm/index.ts",
+      "default": "./src/swarm/index.ts"
     }
   },
   "scripts": {

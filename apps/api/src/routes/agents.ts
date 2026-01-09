@@ -9,6 +9,7 @@ import {
 } from '@insight-os/ai-engine/graphs';
 import { allTools } from '@insight-os/ai-engine/tools';
 import { getPendingApprovals, resolveApproval } from '@insight-os/ai-engine/hitl';
+import { runSwarm, streamSwarm } from '@insight-os/ai-engine/swarm';
 import { createResponse, createErrorResponse } from '@insight-os/shared';
 
 export const agentsRoutes = new Hono();
@@ -247,5 +248,62 @@ agentsRoutes.post('/workflow/hitl/resume', async (c) => {
     return c.json(createResponse(result));
   } catch (error) {
     return c.json(createErrorResponse('Resume failed'), 500);
+  }
+});
+
+/**
+ * POST /agents/swarm
+ * Run multi-agent swarm
+ */
+agentsRoutes.post('/swarm', async (c) => {
+  try {
+    const { query, maxSteps } = await c.req.json<{
+      query: string;
+      maxSteps?: number;
+    }>();
+
+    if (!query) {
+      return c.json(createErrorResponse('Query is required'), 400);
+    }
+
+    const result = await runSwarm(query, maxSteps);
+    return c.json(createResponse(result));
+  } catch (error) {
+    console.error('Swarm error:', error);
+    return c.json(createErrorResponse('Swarm execution failed'), 500);
+  }
+});
+
+/**
+ * POST /agents/swarm/stream
+ * Stream swarm execution
+ */
+agentsRoutes.post('/swarm/stream', async (c) => {
+  try {
+    const { query, maxSteps } = await c.req.json<{
+      query: string;
+      maxSteps?: number;
+    }>();
+
+    if (!query) {
+      return c.json(createErrorResponse('Query is required'), 400);
+    }
+
+    c.header('Content-Type', 'text/event-stream');
+    c.header('Cache-Control', 'no-cache');
+    c.header('Connection', 'keep-alive');
+
+    return stream(c, async (stream) => {
+      const generator = streamSwarm(query, maxSteps);
+
+      for await (const event of generator) {
+        await stream.write(`data: ${JSON.stringify(event)}\n\n`);
+      }
+
+      await stream.write('data: [DONE]\n\n');
+    });
+  } catch (error) {
+    console.error('Stream error:', error);
+    return c.json(createErrorResponse('Stream failed'), 500);
   }
 });
