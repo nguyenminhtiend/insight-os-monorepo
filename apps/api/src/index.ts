@@ -14,6 +14,8 @@ import { agentsRoutes } from './routes/agents.js';
 import { memoryRoutes } from './routes/memory.js';
 import { jobsRoutes } from './routes/jobs.js';
 import { metricsRoutes } from './routes/metrics.js';
+import { supportRoutes } from './routes/support.js';
+import { supportMetricsRoutes } from './routes/support-metrics.js';
 import { closeDatabaseConnection } from './db/index.js';
 import { closeRedisConnection } from './lib/redis.js';
 import { flushTraces } from './lib/observability.js';
@@ -44,12 +46,14 @@ app.route('/agents', agentsRoutes);
 app.route('/memory', memoryRoutes);
 app.route('/jobs', jobsRoutes);
 app.route('/metrics', metricsRoutes);
+app.route('/support', supportRoutes);
+app.route('/support/metrics', supportMetricsRoutes);
 
 // Root route
 app.get('/', (c) => {
   return c.json({
     name: 'InsightOS API',
-    version: '0.0.8',
+    version: '0.1.0',
     endpoints: {
       health: '/health',
       chat: '/chat',
@@ -81,7 +85,14 @@ app.get('/', (c) => {
       jobsStatus: '/jobs/status',
       jobsDocuments: '/jobs/documents',
       jobsGet: '/jobs/:queue/:id',
-      metrics: '/metrics'
+      metrics: '/metrics',
+      supportChat: '/support/chat',
+      supportChatStream: '/support/chat/stream',
+      supportCustomers: '/support/customers',
+      supportCustomer: '/support/customers/:id',
+      supportKnowledgeIngest: '/support/knowledge/ingest',
+      supportKnowledge: '/support/knowledge',
+      supportTickets: '/support/tickets'
     }
   });
 });

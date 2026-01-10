@@ -31,6 +31,10 @@
     "./swarm": {
       "types": "./src/swarm/index.ts",
       "default": "./src/swarm/index.ts"
+    },
+    "./support": {
+      "types": "./src/support/index.ts",
+      "default": "./src/support/index.ts"
     }
   },
   "scripts": {
@@ -41,6 +45,7 @@
     "@langchain/core": "^0.3.0",
     "@langchain/langgraph": "^0.2.0",
     "@langchain/openai": "^0.3.0",
+    "@insight-os/jobs": "workspace:*",
     "ai": "^4.0.0",
     "zod": "^3.24.1"
   },

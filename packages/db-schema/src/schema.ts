@@ -38,6 +38,14 @@ export const documentStatusEnum = pgEnum('document_status', [
   'completed',
   'failed'
 ]);
+export const ticketStatusEnum = pgEnum('ticket_status', [
+  'open',
+  'pending',
+  'resolved',
+  'escalated'
+]);
+export const priorityEnum = pgEnum('priority', ['low', 'medium', 'high', 'urgent']);
+export const articleStatusEnum = pgEnum('article_status', ['draft', 'published', 'archived']);
 
 // Conversations table
 export const conversations = pgTable(
@@ -218,6 +226,77 @@ export const conversationSummaries = pgTable(
   ]
 );
 
+// Customer profiles (Phase 16)
+export const customers = pgTable(
+  'customers',
+  {
+    id: text('id').primaryKey(),
+    email: text('email').notNull(),
+    name: text('name'),
+    plan: text('plan'), // free, pro, enterprise
+    accountAge: integer('account_age_days'),
+    totalTickets: integer('total_tickets').default(0),
+    avgSatisfaction: integer('avg_satisfaction'),
+    tags: jsonb('tags').$type<string[]>(),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+    createdAt: timestamp('created_at').defaultNow().notNull()
+  },
+  (table) => [index('customers_email_idx').on(table.email), index('customers_plan_idx').on(table.plan)]
+);
+
+// Support tickets (Phase 16)
+export const tickets = pgTable(
+  'tickets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    customerId: text('customer_id')
+      .references(() => customers.id, { onDelete: 'cascade' })
+      .notNull(),
+    subject: text('subject').notNull(),
+    status: ticketStatusEnum('status').default('open').notNull(),
+    priority: priorityEnum('priority').default('medium').notNull(),
+    category: text('category'), // billing, technical, account, general
+    assignedTo: text('assigned_to'), // agent identifier or 'human'
+    conversationId: uuid('conversation_id').references(() => conversations.id, {
+      onDelete: 'set null'
+    }),
+    resolution: text('resolution'),
+    satisfactionScore: integer('satisfaction_score'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    resolvedAt: timestamp('resolved_at'),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>()
+  },
+  (table) => [
+    index('tickets_customer_idx').on(table.customerId),
+    index('tickets_status_idx').on(table.status),
+    index('tickets_priority_idx').on(table.priority),
+    index('tickets_category_idx').on(table.category),
+    index('tickets_created_at_idx').on(table.createdAt)
+  ]
+);
+
+// Knowledge base articles (Phase 16)
+export const knowledgeArticles = pgTable(
+  'knowledge_articles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    title: text('title').notNull(),
+    content: text('content').notNull(),
+    category: text('category').notNull(),
+    tags: jsonb('tags').$type<string[]>(),
+    viewCount: integer('view_count').default(0),
+    helpfulCount: integer('helpful_count').default(0),
+    notHelpfulCount: integer('not_helpful_count').default(0),
+    status: articleStatusEnum('status').default('published').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull()
+  },
+  (table) => [
+    index('articles_category_idx').on(table.category),
+    index('articles_status_idx').on(table.status)
+  ]
+);
+
 // Export table types
 export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;
@@ -233,3 +312,9 @@ export type UserMemory = typeof userMemories.$inferSelect;
 export type NewUserMemory = typeof userMemories.$inferInsert;
 export type ConversationSummary = typeof conversationSummaries.$inferSelect;
 export type NewConversationSummary = typeof conversationSummaries.$inferInsert;
+export type Customer = typeof customers.$inferSelect;
+export type NewCustomer = typeof customers.$inferInsert;
+export type Ticket = typeof tickets.$inferSelect;
+export type NewTicket = typeof tickets.$inferInsert;
+export type KnowledgeArticle = typeof knowledgeArticles.$inferSelect;
+export type NewKnowledgeArticle = typeof knowledgeArticles.$inferInsert;
