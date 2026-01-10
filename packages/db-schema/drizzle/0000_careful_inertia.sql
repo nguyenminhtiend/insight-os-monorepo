@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS vector;
+
 CREATE TYPE "public"."conversation_status" AS ENUM('active', 'archived', 'deleted');--> statement-breakpoint
 CREATE TYPE "public"."document_status" AS ENUM('pending', 'processing', 'completed', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."message_role" AS ENUM('user', 'assistant', 'system');--> statement-breakpoint
@@ -77,4 +79,5 @@ CREATE INDEX "chunks_index_idx" ON "document_chunks" USING btree ("chunk_index")
 CREATE INDEX "documents_status_idx" ON "documents" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "documents_type_idx" ON "documents" USING btree ("type");--> statement-breakpoint
 CREATE INDEX "messages_conversation_idx" ON "messages" USING btree ("conversation_id");--> statement-breakpoint
-CREATE INDEX "messages_created_at_idx" ON "messages" USING btree ("created_at");
+CREATE INDEX "messages_created_at_idx" ON "messages" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS chunks_embedding_idx ON document_chunks USING hnsw (embedding vector_cosine_ops);
