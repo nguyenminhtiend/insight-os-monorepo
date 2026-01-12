@@ -45,33 +45,33 @@ export interface SupportResult {
 /**
  * Get tools for specific agent
  */
-function getAgentTools(agentRole: string): Record<string, unknown> {
-  const toolMap: Record<string, Record<string, unknown>> = {
+function getAgentTools(agentRole: string): Record<string, any> {
+  const toolMap: Record<string, Record<string, any>> = {
     triage: {
-      handoff: handoffTool
+      handoff: handoffTool,
     },
     technical: {
       ragSearch: supportTools.ragSearch,
       checkFeatureAccess: supportTools.checkFeatureAccess,
       createTicket: supportTools.createTicket,
-      handoff: handoffTool
+      handoff: handoffTool,
     },
     billing: {
       getBillingHistory: supportTools.getBillingHistory,
       getSubscription: supportTools.getSubscription,
       requestRefund: supportTools.requestRefund,
-      handoff: handoffTool
+      handoff: handoffTool,
     },
     account: {
       sendPasswordReset: supportTools.sendPasswordReset,
       checkPermissions: supportTools.checkPermissions,
-      handoff: handoffTool
+      handoff: handoffTool,
     },
     escalation: {
       createUrgentTicket: supportTools.createUrgentTicket,
       notifyHuman: supportTools.notifyHuman,
-      offerCompensation: supportTools.offerCompensation
-    }
+      offerCompensation: supportTools.offerCompensation,
+    },
   };
 
   return toolMap[agentRole] || { handoff: handoffTool };
@@ -83,7 +83,7 @@ function getAgentTools(agentRole: string): Record<string, unknown> {
 async function runSupportAgent(
   agent: SupportAgent,
   input: string,
-  context: SupportContext
+  context: SupportContext,
 ): Promise<{
   output: string;
   handoff?: { targetAgent: string; context: string; data?: Record<string, unknown> };
@@ -103,7 +103,13 @@ Customer Information:
 - Account Age: ${context.customer.accountAge || 0} days
 - Email: ${context.customer.email || 'not provided'}
 
-${context.pastTickets && context.pastTickets.length > 0 ? `Recent Tickets:\n${context.pastTickets.map((t) => `- ${t.category}: ${t.subject} (${t.resolution || 'unresolved'})`).join('\n')}` : ''}
+${
+  context.pastTickets && context.pastTickets.length > 0
+    ? `Recent Tickets:\n${context.pastTickets
+        .map((t) => `- ${t.category}: ${t.subject} (${t.resolution || 'unresolved'})`)
+        .join('\n')}`
+    : ''
+}
 `.trim();
 
   // Enhanced system prompt with context
@@ -111,14 +117,14 @@ ${context.pastTickets && context.pastTickets.length > 0 ? `Recent Tickets:\n${co
 
 ${customerContext}`;
 
-  const tools = getAgentTools(agent.role);
+  const tools = getAgentTools(context.currentAgent);
 
   const result = await generateText({
     model: openai('gpt-4o-mini'),
     system: systemPrompt,
     prompt: `${conversationHistory}\n\nCurrent request: ${input}`,
     tools,
-    maxSteps: 5
+    maxSteps: 5,
   });
 
   // Check for handoff in tool calls
@@ -133,7 +139,7 @@ ${customerContext}`;
 
         return {
           output: result.text,
-          handoff: handoffResult
+          handoff: handoffResult,
         };
       }
     }
@@ -164,7 +170,7 @@ export async function runSupportSwarm(
     }>;
     conversationId?: string;
   },
-  maxSteps: number = 10
+  maxSteps: number = 10,
 ): Promise<SupportResult> {
   const context: SupportContext = {
     messages: [
@@ -172,14 +178,14 @@ export async function runSupportSwarm(
         agent: 'user',
         role: 'user',
         content: query,
-        timestamp: new Date()
-      }
+        timestamp: new Date(),
+      },
     ],
     customer: options.customer,
     pastTickets: options.pastTickets,
     data: {},
     currentAgent: 'triage',
-    history: []
+    history: [],
   };
 
   const agentsUsed = new Set<string>();
@@ -198,7 +204,7 @@ export async function runSupportSwarm(
     context.history.push({
       agent: context.currentAgent,
       action: 'processing',
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
     console.log(`[Support] Running ${agent.name}...`);
@@ -209,7 +215,7 @@ export async function runSupportSwarm(
       agent: agent.name,
       role: 'assistant',
       content: result.output,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
     if (result.handoff) {
@@ -236,7 +242,7 @@ export async function runSupportSwarm(
       context.history.push({
         agent: result.handoff.targetAgent,
         action: 'handoff received',
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       // Update query with handoff context
@@ -260,7 +266,7 @@ export async function runSupportSwarm(
     category,
     resolved,
     requiresHuman,
-    context
+    context,
   };
 }
 
@@ -284,7 +290,7 @@ export async function* streamSupportSwarm(
       createdAt: Date;
     }>;
   },
-  maxSteps: number = 10
+  maxSteps: number = 10,
 ): AsyncGenerator<{
   type: 'agent_start' | 'agent_output' | 'handoff' | 'escalation' | 'complete';
   agent?: string;
@@ -297,14 +303,14 @@ export async function* streamSupportSwarm(
         agent: 'user',
         role: 'user',
         content: query,
-        timestamp: new Date()
-      }
+        timestamp: new Date(),
+      },
     ],
     customer: options.customer,
     pastTickets: options.pastTickets,
     data: {},
     currentAgent: 'triage',
-    history: []
+    history: [],
   };
 
   let steps = 0;
@@ -323,7 +329,7 @@ export async function* streamSupportSwarm(
       agent: agent.name,
       role: 'assistant',
       content: result.output,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
     if (result.handoff) {
@@ -332,13 +338,13 @@ export async function* streamSupportSwarm(
       if (result.handoff.targetAgent === 'escalation') {
         yield {
           type: 'escalation',
-          content: 'Escalating to human agent...'
+          content: 'Escalating to human agent...',
         };
       } else {
         yield {
           type: 'handoff',
           agent: result.handoff.targetAgent,
-          content: result.handoff.context
+          content: result.handoff.context,
         };
       }
 
@@ -353,6 +359,6 @@ export async function* streamSupportSwarm(
 
   yield {
     type: 'complete',
-    content: context.messages.filter((m) => m.role === 'assistant').pop()?.content
+    content: context.messages.filter((m) => m.role === 'assistant').pop()?.content,
   };
 }
