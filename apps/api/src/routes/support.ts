@@ -330,16 +330,18 @@ supportRoutes.get('/knowledge', async (c) => {
     const category = c.req.query('category');
     const status = c.req.query('status') as 'draft' | 'published' | 'archived' | undefined;
 
-    let query = db.select().from(knowledgeArticles);
+    let query = db.select().from(knowledgeArticles).$dynamic();
+    const conditions = [];
 
-    if (category && status) {
-      query = query.where(
-        and(eq(knowledgeArticles.category, category), eq(knowledgeArticles.status, status))
-      );
-    } else if (category) {
-      query = query.where(eq(knowledgeArticles.category, category));
-    } else if (status) {
-      query = query.where(eq(knowledgeArticles.status, status));
+    if (category) {
+      conditions.push(eq(knowledgeArticles.category, category));
+    }
+    if (status) {
+      conditions.push(eq(knowledgeArticles.status, status));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
     }
 
     const articles = await query.orderBy(desc(knowledgeArticles.createdAt)).limit(50);
@@ -366,7 +368,7 @@ supportRoutes.get('/tickets', async (c) => {
     const status = c.req.query('status') as 'open' | 'pending' | 'resolved' | 'escalated' | undefined;
     const category = c.req.query('category');
 
-    let query = db.select().from(tickets);
+    let query = db.select().from(tickets).$dynamic();
 
     const conditions = [];
     if (customerId) conditions.push(eq(tickets.customerId, customerId));
