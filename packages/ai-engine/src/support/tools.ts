@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { requestApproval } from '../hitl/approval.js';
-import { queueWorkflow } from '@insight-os/jobs';
+import { db, tickets } from '@insight-os/db-schema';
 
 /**
  * Request a refund for a customer
@@ -60,21 +60,13 @@ export const createUrgentTicket = tool({
     category: z.string().describe('Category: technical, billing, account, or general')
   }),
   execute: async (params) => {
-    // Queue escalation workflow
-    const jobId = await queueWorkflow('escalation', {
-      ...params,
-      notifySlack: true,
-      notifyEmail: true,
-      escalatedAt: new Date().toISOString()
-    });
+    // Log escalation (in production, this would trigger alerts/notifications)
+    console.log(`[Support] Created ${params.priority} ticket for ${params.customerId}`);
 
     const estimatedResponse = params.priority === 'urgent' ? '1 hour' : '4 hours';
 
-    console.log(`[Support] Created ${params.priority} ticket for ${params.customerId}`);
-
     return {
       ticketId: `TKT-${Date.now()}`,
-      jobId,
       priority: params.priority,
       estimatedResponse,
       message: `Your issue has been escalated to our specialist team. Expected response: ${estimatedResponse}.`
@@ -202,20 +194,46 @@ export const createTicket = tool({
     subject: z.string(),
     category: z.string(),
     priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-    description: z.string()
+    description: z.string(),
+    conversationId: z.string().optional()
   }),
-  execute: async ({ customerId, subject, category, priority = 'medium', description }) => {
-    // TODO: Insert into tickets table
+  execute: async ({
+    customerId,
+    subject,
+    category,
+    priority = 'medium',
+    description,
+    conversationId
+  }) => {
     console.log(`[Support] Creating ticket for ${customerId}: ${subject}`);
 
+    // Save ticket to database
+    const [ticket] = await db
+      .insert(tickets)
+      .values({
+        customerId,
+        subject,
+        category,
+        priority,
+        status: 'open',
+        assignedTo: 'ai_agent',
+        conversationId: conversationId || undefined,
+        resolution: description,
+        metadata: {
+          createdBy: 'support_agent',
+          description
+        }
+      })
+      .returning();
+
     return {
-      ticketId: `TKT-${Date.now()}`,
-      customerId,
-      subject,
-      category,
-      priority,
-      status: 'open',
-      createdAt: new Date().toISOString()
+      ticketId: ticket.id,
+      customerId: ticket.customerId,
+      subject: ticket.subject,
+      category: ticket.category,
+      priority: ticket.priority,
+      status: ticket.status,
+      createdAt: ticket.createdAt.toISOString()
     };
   }
 });

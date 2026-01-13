@@ -170,6 +170,9 @@ importers:
       '@ai-sdk/openai':
         specifier: ^1.0.0
         version: 1.3.24(zod@3.25.76)
+      '@insight-os/db-schema':
+        specifier: workspace:*
+        version: link:../db-schema
       '@insight-os/jobs':
         specifier: workspace:*
         version: link:../jobs

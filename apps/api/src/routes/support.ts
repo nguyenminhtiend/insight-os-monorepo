@@ -31,7 +31,11 @@ supportRoutes.post('/chat', async (c) => {
     const contextSpan = createSpan(trace, 'load_context', { customerId });
 
     // Load customer data
-    const [customer] = await db.select().from(customers).where(eq(customers.id, customerId)).limit(1);
+    const [customer] = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
 
     if (!customer) {
       return c.json(createErrorResponse('Customer not found'), 404);
@@ -39,7 +43,11 @@ supportRoutes.post('/chat', async (c) => {
 
     // Load memory
     const memory = new MemoryManager(customerId, conversationId || `support_${Date.now()}`);
+    await memory.addMessage('user', message);
     const context = await memory.getContext();
+
+    // Get DB conversation ID for linking tickets
+    const dbConversationId = await memory.getConversationId();
 
     // Get past tickets
     const pastTickets = await db
@@ -54,26 +62,23 @@ supportRoutes.post('/chat', async (c) => {
     // Run support swarm
     const swarmSpan = createSpan(trace, 'support_swarm', { message });
 
-    const result = await runSupportSwarm(
-      message,
-      {
-        customer: {
-          id: customer.id,
-          email: customer.email,
-          name: customer.name || undefined,
-          plan: customer.plan || undefined,
-          accountAge: customer.accountAge || undefined
-        },
-        context,
-        pastTickets: pastTickets.map((t) => ({
-          subject: t.subject,
-          category: t.category || 'general',
-          resolution: t.resolution || undefined,
-          createdAt: t.createdAt
-        })),
-        conversationId
-      }
-    );
+    const result = await runSupportSwarm(message, {
+      customer: {
+        id: customer.id,
+        email: customer.email,
+        name: customer.name || undefined,
+        plan: customer.plan || undefined,
+        accountAge: customer.accountAge || undefined
+      },
+      context,
+      pastTickets: pastTickets.map((t) => ({
+        subject: t.subject,
+        category: t.category || 'general',
+        resolution: t.resolution || undefined,
+        createdAt: t.createdAt
+      })),
+      conversationId: dbConversationId
+    });
 
     swarmSpan.end({
       output: {
@@ -83,8 +88,7 @@ supportRoutes.post('/chat', async (c) => {
       }
     });
 
-    // Update memory
-    await memory.addMessage('user', message);
+    // Update memory (user message already added, just add assistant response)
     await memory.addMessage('assistant', result.response);
 
     // Update customer ticket count
@@ -135,11 +139,23 @@ supportRoutes.post('/chat/stream', async (c) => {
     }
 
     // Load customer data
-    const [customer] = await db.select().from(customers).where(eq(customers.id, customerId)).limit(1);
+    const [customer] = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
 
     if (!customer) {
       return c.json(createErrorResponse('Customer not found'), 404);
     }
+
+    // Load memory
+    const memory = new MemoryManager(customerId, conversationId || `support_${Date.now()}`);
+    await memory.addMessage('user', message);
+    const context = await memory.getContext();
+
+    // Get DB conversation ID for linking tickets
+    const dbConversationId = await memory.getConversationId();
 
     // Get past tickets
     const pastTickets = await db
@@ -154,30 +170,36 @@ supportRoutes.post('/chat/stream', async (c) => {
     c.header('Connection', 'keep-alive');
 
     return stream(c, async (stream) => {
-      const generator = streamSupportSwarm(
-        message,
-        {
-          customer: {
-            id: customer.id,
-            email: customer.email,
-            name: customer.name || undefined,
-            plan: customer.plan || undefined,
-            accountAge: customer.accountAge || undefined
-          },
-          pastTickets: pastTickets.map((t) => ({
-            subject: t.subject,
-            category: t.category || 'general',
-            resolution: t.resolution || undefined,
-            createdAt: t.createdAt
-          }))
-        }
-      );
+      const generator = streamSupportSwarm(message, {
+        customer: {
+          id: customer.id,
+          email: customer.email,
+          name: customer.name || undefined,
+          plan: customer.plan || undefined,
+          accountAge: customer.accountAge || undefined
+        },
+        pastTickets: pastTickets.map((t) => ({
+          subject: t.subject,
+          category: t.category || 'general',
+          resolution: t.resolution || undefined,
+          createdAt: t.createdAt
+        }))
+      });
 
+      let fullResponse = '';
       for await (const event of generator) {
         await stream.write(`data: ${JSON.stringify(event)}\n\n`);
+        if (event.type === 'agent_output' && event.content) {
+          fullResponse = event.content;
+        }
       }
 
       await stream.write('data: [DONE]\n\n');
+
+      // Save assistant response to memory
+      if (fullResponse) {
+        await memory.addMessage('assistant', fullResponse);
+      }
     });
   } catch (error) {
     console.error('[Support] Stream error:', error);
@@ -227,28 +249,38 @@ supportRoutes.post('/customers', async (c) => {
 /**
  * GET /support/customers/:id
  * Get customer details
+ * Ensures customer can only see their own data
  */
 supportRoutes.get('/customers/:id', async (c) => {
   try {
     const customerId = c.req.param('id');
 
-    const [customer] = await db.select().from(customers).where(eq(customers.id, customerId)).limit(1);
+    const [customer] = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
 
     if (!customer) {
       return c.json(createErrorResponse('Customer not found'), 404);
     }
 
-    // Get tickets
+    // Get tickets - only this customer's tickets
     const customerTickets = await db
       .select()
       .from(tickets)
       .where(eq(tickets.customerId, customerId))
       .orderBy(desc(tickets.createdAt));
 
+    // Get conversations - only this customer's conversations
+    const { MemoryManager } = await import('@insight-os/memory');
+    const conversations = await MemoryManager.getUserConversations(customerId);
+
     return c.json(
       createResponse({
         ...customer,
-        tickets: customerTickets
+        tickets: customerTickets,
+        conversations
       })
     );
   } catch (error) {
@@ -365,7 +397,12 @@ supportRoutes.get('/knowledge', async (c) => {
 supportRoutes.get('/tickets', async (c) => {
   try {
     const customerId = c.req.query('customerId');
-    const status = c.req.query('status') as 'open' | 'pending' | 'resolved' | 'escalated' | undefined;
+    const status = c.req.query('status') as
+      | 'open'
+      | 'pending'
+      | 'resolved'
+      | 'escalated'
+      | undefined;
     const category = c.req.query('category');
 
     let query = db.select().from(tickets).$dynamic();

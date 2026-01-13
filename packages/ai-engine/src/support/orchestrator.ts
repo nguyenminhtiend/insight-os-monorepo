@@ -1,4 +1,4 @@
-import { generateText } from 'ai';
+import { generateText, tool } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { supportAgents, handoffTool, type SupportAgent } from './agents.js';
 import { supportTools } from './tools.js';
@@ -30,6 +30,7 @@ export interface SupportContext {
   data: Record<string, unknown>;
   currentAgent: string;
   history: Array<{ agent: string; action: string; timestamp: Date }>;
+  conversationId?: string; // DB conversation ID for linking tickets
 }
 
 export interface SupportResult {
@@ -44,34 +45,40 @@ export interface SupportResult {
 
 /**
  * Get tools for specific agent
+ * Note: createTicket tool will receive conversationId from context.data
  */
-function getAgentTools(agentRole: string): Record<string, any> {
+function getAgentTools(agentRole: string, context: SupportContext): Record<string, any> {
+  // Store conversationId in context.data for tools to access
+  if (context.conversationId) {
+    context.data.conversationId = context.conversationId;
+  }
+
   const toolMap: Record<string, Record<string, any>> = {
     triage: {
-      handoff: handoffTool,
+      handoff: handoffTool
     },
     technical: {
       ragSearch: supportTools.ragSearch,
       checkFeatureAccess: supportTools.checkFeatureAccess,
       createTicket: supportTools.createTicket,
-      handoff: handoffTool,
+      handoff: handoffTool
     },
     billing: {
       getBillingHistory: supportTools.getBillingHistory,
       getSubscription: supportTools.getSubscription,
       requestRefund: supportTools.requestRefund,
-      handoff: handoffTool,
+      handoff: handoffTool
     },
     account: {
       sendPasswordReset: supportTools.sendPasswordReset,
       checkPermissions: supportTools.checkPermissions,
-      handoff: handoffTool,
+      handoff: handoffTool
     },
     escalation: {
       createUrgentTicket: supportTools.createUrgentTicket,
       notifyHuman: supportTools.notifyHuman,
-      offerCompensation: supportTools.offerCompensation,
-    },
+      offerCompensation: supportTools.offerCompensation
+    }
   };
 
   return toolMap[agentRole] || { handoff: handoffTool };
@@ -83,7 +90,7 @@ function getAgentTools(agentRole: string): Record<string, any> {
 async function runSupportAgent(
   agent: SupportAgent,
   input: string,
-  context: SupportContext,
+  context: SupportContext
 ): Promise<{
   output: string;
   handoff?: { targetAgent: string; context: string; data?: Record<string, unknown> };
@@ -117,14 +124,14 @@ ${
 
 ${customerContext}`;
 
-  const tools = getAgentTools(context.currentAgent);
+  const tools = getAgentTools(context.currentAgent, context);
 
   const result = await generateText({
     model: openai('gpt-4o-mini'),
     system: systemPrompt,
     prompt: `${conversationHistory}\n\nCurrent request: ${input}`,
     tools,
-    maxSteps: 5,
+    maxSteps: 5
   });
 
   // Check for handoff in tool calls
@@ -139,7 +146,7 @@ ${customerContext}`;
 
         return {
           output: result.text,
-          handoff: handoffResult,
+          handoff: handoffResult
         };
       }
     }
@@ -170,7 +177,7 @@ export async function runSupportSwarm(
     }>;
     conversationId?: string;
   },
-  maxSteps: number = 10,
+  maxSteps: number = 10
 ): Promise<SupportResult> {
   const context: SupportContext = {
     messages: [
@@ -178,14 +185,15 @@ export async function runSupportSwarm(
         agent: 'user',
         role: 'user',
         content: query,
-        timestamp: new Date(),
-      },
+        timestamp: new Date()
+      }
     ],
     customer: options.customer,
     pastTickets: options.pastTickets,
     data: {},
     currentAgent: 'triage',
     history: [],
+    conversationId: options.conversationId
   };
 
   const agentsUsed = new Set<string>();
@@ -204,7 +212,7 @@ export async function runSupportSwarm(
     context.history.push({
       agent: context.currentAgent,
       action: 'processing',
-      timestamp: new Date(),
+      timestamp: new Date()
     });
 
     console.log(`[Support] Running ${agent.name}...`);
@@ -215,7 +223,7 @@ export async function runSupportSwarm(
       agent: agent.name,
       role: 'assistant',
       content: result.output,
-      timestamp: new Date(),
+      timestamp: new Date()
     });
 
     if (result.handoff) {
@@ -242,7 +250,7 @@ export async function runSupportSwarm(
       context.history.push({
         agent: result.handoff.targetAgent,
         action: 'handoff received',
-        timestamp: new Date(),
+        timestamp: new Date()
       });
 
       // Update query with handoff context
@@ -266,7 +274,7 @@ export async function runSupportSwarm(
     category,
     resolved,
     requiresHuman,
-    context,
+    context
   };
 }
 
@@ -290,7 +298,7 @@ export async function* streamSupportSwarm(
       createdAt: Date;
     }>;
   },
-  maxSteps: number = 10,
+  maxSteps: number = 10
 ): AsyncGenerator<{
   type: 'agent_start' | 'agent_output' | 'handoff' | 'escalation' | 'complete';
   agent?: string;
@@ -303,14 +311,14 @@ export async function* streamSupportSwarm(
         agent: 'user',
         role: 'user',
         content: query,
-        timestamp: new Date(),
-      },
+        timestamp: new Date()
+      }
     ],
     customer: options.customer,
     pastTickets: options.pastTickets,
     data: {},
     currentAgent: 'triage',
-    history: [],
+    history: []
   };
 
   let steps = 0;
@@ -329,7 +337,7 @@ export async function* streamSupportSwarm(
       agent: agent.name,
       role: 'assistant',
       content: result.output,
-      timestamp: new Date(),
+      timestamp: new Date()
     });
 
     if (result.handoff) {
@@ -338,13 +346,13 @@ export async function* streamSupportSwarm(
       if (result.handoff.targetAgent === 'escalation') {
         yield {
           type: 'escalation',
-          content: 'Escalating to human agent...',
+          content: 'Escalating to human agent...'
         };
       } else {
         yield {
           type: 'handoff',
           agent: result.handoff.targetAgent,
-          content: result.handoff.context,
+          content: result.handoff.context
         };
       }
 
@@ -359,6 +367,6 @@ export async function* streamSupportSwarm(
 
   yield {
     type: 'complete',
-    content: context.messages.filter((m) => m.role === 'assistant').pop()?.content,
+    content: context.messages.filter((m) => m.role === 'assistant').pop()?.content
   };
 }

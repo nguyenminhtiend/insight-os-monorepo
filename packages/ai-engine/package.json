@@ -45,6 +45,7 @@
     "@langchain/core": "^0.3.0",
     "@langchain/langgraph": "^0.2.0",
     "@langchain/openai": "^0.3.0",
+    "@insight-os/db-schema": "workspace:*",
     "@insight-os/jobs": "workspace:*",
     "ai": "^4.0.0",
     "zod": "^3.24.1"
@@ -54,4 +55,3 @@
     "typescript": "^5.7.2"
   }
 }
-

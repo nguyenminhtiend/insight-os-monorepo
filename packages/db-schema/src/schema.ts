@@ -51,6 +51,7 @@ export const conversations = pgTable(
   'conversations',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(),
     title: text('title'),
     status: conversationStatusEnum('status').default('active').notNull(),
     metadata: jsonb('metadata').$type<Record<string, unknown>>(),
@@ -58,6 +59,7 @@ export const conversations = pgTable(
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (table) => [
+    index('conversations_user_id_idx').on(table.userId),
     index('conversations_status_idx').on(table.status),
     index('conversations_created_at_idx').on(table.createdAt),
   ],
