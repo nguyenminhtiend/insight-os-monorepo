@@ -40,7 +40,7 @@ async function processDocumentJob(job: Job<DocumentJob>): Promise<void> {
 export function startDocumentWorker(): Worker {
   const worker = new Worker('documents', processDocumentJob, {
     connection,
-    concurrency: 3,
+    concurrency: 3
   });
 
   worker.on('completed', (job) => {
@@ -53,4 +53,3 @@ export function startDocumentWorker(): Worker {
 
   return worker;
 }
-

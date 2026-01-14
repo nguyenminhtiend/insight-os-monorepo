@@ -14,6 +14,31 @@
     },
     "clean": {
       "cache": false
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"],
+      "env": ["OPENAI_API_KEY", "DATABASE_URL", "REDIS_URL"]
+    },
+    "test:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "eval:handoff": {
+      "dependsOn": ["^build"],
+      "env": ["OPENAI_API_KEY"]
+    },
+    "eval:safety": {
+      "dependsOn": ["^build"],
+      "env": ["OPENAI_API_KEY"]
+    },
+    "eval:promptfoo": {
+      "dependsOn": ["^build"],
+      "env": ["OPENAI_API_KEY"]
     }
   }
 }

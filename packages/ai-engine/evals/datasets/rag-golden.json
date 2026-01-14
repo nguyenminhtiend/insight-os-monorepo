@@ -1,0 +1,62 @@
+{
+  "version": "1.0",
+  "description": "RAG evaluation golden dataset",
+  "questions": [
+    {
+      "id": "rag-001",
+      "query": "How do I reset my API key?",
+      "groundTruth": "Navigate to Settings > API Keys > Regenerate. Your old key will be invalidated immediately.",
+      "expectedSources": ["docs/api-keys.md", "docs/settings.md"],
+      "category": "api"
+    },
+    {
+      "id": "rag-002",
+      "query": "What's the rate limit for the free plan?",
+      "groundTruth": "100 requests per minute for free plan, 1000 for pro, unlimited for enterprise",
+      "expectedSources": ["docs/pricing.md", "docs/rate-limits.md"],
+      "category": "pricing"
+    },
+    {
+      "id": "rag-003",
+      "query": "How do I set up webhook notifications?",
+      "groundTruth": "Go to Settings > Webhooks > Add Endpoint. Enter your URL and select events to subscribe to.",
+      "expectedSources": ["docs/webhooks.md", "docs/integrations.md"],
+      "category": "integrations"
+    },
+    {
+      "id": "rag-004",
+      "query": "What authentication methods are supported?",
+      "groundTruth": "API key, OAuth 2.0, and JWT tokens. Enterprise plans also support SAML SSO.",
+      "expectedSources": ["docs/authentication.md", "docs/security.md"],
+      "category": "security"
+    },
+    {
+      "id": "rag-005",
+      "query": "How do I export my data?",
+      "groundTruth": "Use the Export feature in Settings > Data > Export. Supports JSON, CSV, and XML formats.",
+      "expectedSources": ["docs/data-export.md", "docs/settings.md"],
+      "category": "data"
+    },
+    {
+      "id": "rag-006",
+      "query": "What's the difference between pro and enterprise plans?",
+      "groundTruth": "Enterprise includes SSO, dedicated support, custom SLAs, and higher rate limits. Pro has standard features with priority support.",
+      "expectedSources": ["docs/pricing.md", "docs/plans.md"],
+      "category": "pricing"
+    },
+    {
+      "id": "rag-007",
+      "query": "How do I invite team members?",
+      "groundTruth": "Go to Team Settings > Members > Invite. Enter email addresses and select roles (admin, member, viewer).",
+      "expectedSources": ["docs/team-management.md", "docs/roles.md"],
+      "category": "account"
+    },
+    {
+      "id": "rag-008",
+      "query": "What file formats are supported for import?",
+      "groundTruth": "JSON, CSV, XML, and Excel (.xlsx). Maximum file size is 100MB for pro, 1GB for enterprise.",
+      "expectedSources": ["docs/data-import.md", "docs/file-formats.md"],
+      "category": "data"
+    }
+  ]
+}

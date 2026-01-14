@@ -1,0 +1,120 @@
+{
+  "version": "1.0",
+  "description": "Support swarm evaluation dataset",
+  "cases": [
+    {
+      "id": "billing-001",
+      "input": "I want to cancel my subscription",
+      "expectedAgent": "billing",
+      "expectedCategory": "billing",
+      "shouldResolve": true,
+      "tags": ["billing", "cancellation"]
+    },
+    {
+      "id": "billing-002",
+      "input": "Why was I charged $99 twice?",
+      "expectedAgent": "billing",
+      "expectedCategory": "billing",
+      "shouldResolve": true,
+      "tags": ["billing", "dispute"]
+    },
+    {
+      "id": "tech-001",
+      "input": "Getting 404 errors on the API",
+      "expectedAgent": "technical",
+      "expectedCategory": "technical",
+      "shouldResolve": true,
+      "tags": ["technical", "api", "error"]
+    },
+    {
+      "id": "tech-002",
+      "input": "How do I authenticate API requests?",
+      "expectedAgent": "technical",
+      "expectedCategory": "technical",
+      "shouldResolve": true,
+      "tags": ["technical", "api", "documentation"]
+    },
+    {
+      "id": "tech-003",
+      "input": "The dashboard is loading very slowly",
+      "expectedAgent": "technical",
+      "expectedCategory": "technical",
+      "shouldResolve": true,
+      "tags": ["technical", "performance"]
+    },
+    {
+      "id": "account-001",
+      "input": "I forgot my password",
+      "expectedAgent": "account",
+      "expectedCategory": "account",
+      "shouldResolve": true,
+      "tags": ["account", "password"]
+    },
+    {
+      "id": "account-002",
+      "input": "How do I add team members?",
+      "expectedAgent": "account",
+      "expectedCategory": "account",
+      "shouldResolve": true,
+      "tags": ["account", "team"]
+    },
+    {
+      "id": "escalation-001",
+      "input": "This is ridiculous! I've been waiting a week for help!",
+      "expectedAgent": "escalation",
+      "shouldResolve": false,
+      "requiresHuman": true,
+      "tags": ["escalation", "angry"]
+    },
+    {
+      "id": "escalation-002",
+      "input": "I'm going to sue your company if this isn't fixed today",
+      "expectedAgent": "escalation",
+      "shouldResolve": false,
+      "requiresHuman": true,
+      "tags": ["escalation", "legal"]
+    },
+    {
+      "id": "multi-001",
+      "input": "I can't log in AND I was charged twice",
+      "expectedHandoffs": ["triage", "account", "billing"],
+      "shouldResolve": true,
+      "tags": ["multi-domain", "complex"]
+    },
+    {
+      "id": "vip-001",
+      "input": "Your service has been unreliable all month",
+      "customer": {
+        "plan": "enterprise",
+        "accountAge": 730
+      },
+      "expectedAgent": "escalation",
+      "shouldResolve": false,
+      "tags": ["vip", "enterprise"]
+    },
+    {
+      "id": "simple-001",
+      "input": "What's my current plan?",
+      "expectedAgent": "triage",
+      "shouldResolve": true,
+      "tags": ["simple", "info"]
+    },
+    {
+      "id": "refund-small-001",
+      "input": "I need a refund for the $25 charge yesterday",
+      "expectedAgent": "billing",
+      "expectedCategory": "billing",
+      "shouldResolve": true,
+      "tags": ["refund", "auto-approve"]
+    },
+    {
+      "id": "refund-large-001",
+      "input": "I want a full refund of $200",
+      "expectedAgent": "billing",
+      "expectedCategory": "billing",
+      "shouldResolve": false,
+      "requiresHuman": true,
+      "tags": ["refund", "approval-required"]
+    }
+  ]
+}

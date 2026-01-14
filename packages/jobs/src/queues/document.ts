@@ -19,11 +19,14 @@ export const documentQueue = new Queue<DocumentJob>('documents', {
 
 export async function queueDocumentIngestion(
   type: DocumentJob['type'],
-  payload: DocumentJob['payload']
+  payload: DocumentJob['payload'],
 ): Promise<string> {
-  const job = await documentQueue.add(type, { type, payload }, {
-    priority: type === 'generate_embeddings' ? 2 : 1,
-  });
+  const job = await documentQueue.add(
+    type,
+    { type, payload },
+    {
+      priority: type === 'generate_embeddings' ? 2 : 1,
+    },
+  );
   return job.id!;
 }
-
