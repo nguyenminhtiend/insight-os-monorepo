@@ -95,11 +95,11 @@ async function runSupportAgent(
   output: string;
   handoff?: { targetAgent: string; context: string; data?: Record<string, unknown> };
 }> {
-  // Build conversation history
+  // Build FULL conversation history (not filtered by agent)
+  // This ensures agents see the complete context across handoffs
   const conversationHistory = context.messages
-    .filter((m) => m.agent === agent.name || m.role === 'user')
-    .slice(-10) // Last 10 messages for context
-    .map((m) => `${m.role}: ${m.content}`)
+    .slice(-20) // Last 20 messages for context window management
+    .map((m) => `${m.role === 'user' ? 'Customer' : m.agent}: ${m.content}`)
     .join('\n');
 
   // Build customer context
@@ -119,17 +119,19 @@ ${
 }
 `.trim();
 
-  // Enhanced system prompt with context
+  // Enhanced system prompt with FULL context
   const systemPrompt = `${agent.systemPrompt}
 
-${customerContext}`;
+${customerContext}
+
+IMPORTANT: You have access to the full conversation history above. Use it to maintain context across the conversation.`;
 
   const tools = getAgentTools(context.currentAgent, context);
 
   const result = await generateText({
     model: openai('gpt-4o-mini'),
     system: systemPrompt,
-    prompt: `${conversationHistory}\n\nCurrent request: ${input}`,
+    prompt: conversationHistory ? `${conversationHistory}\n\nCustomer: ${input}` : input,
     tools,
     maxSteps: 5
   });
@@ -179,8 +181,47 @@ export async function runSupportSwarm(
   },
   maxSteps: number = 10
 ): Promise<SupportResult> {
+  // Parse memory context to extract previous messages
+  const previousMessages: SupportMessage[] = [];
+
+  if (options.context) {
+    // Extract messages from context string
+    // Context format: "Recent conversation:\nuser: message\nassistant: response\n..."
+    const lines = options.context.split('\n');
+    let inConversation = false;
+
+    for (const line of lines) {
+      if (
+        line.startsWith('Recent conversation:') ||
+        line.startsWith('Previous conversation history:')
+      ) {
+        inConversation = true;
+        continue;
+      }
+      if (line.startsWith('Session facts:') || line.startsWith('User preferences:')) {
+        inConversation = false;
+        continue;
+      }
+
+      if (inConversation && line.trim()) {
+        // Parse "role: message" format
+        const match = line.match(/^(user|assistant|[a-z]+):\s*(.+)$/i);
+        if (match) {
+          const [, roleOrAgent, content] = match;
+          previousMessages.push({
+            agent: roleOrAgent === 'user' ? 'user' : roleOrAgent,
+            role: roleOrAgent === 'user' ? 'user' : 'assistant',
+            content: content.trim(),
+            timestamp: new Date()
+          });
+        }
+      }
+    }
+  }
+
   const context: SupportContext = {
     messages: [
+      ...previousMessages, // Include previous conversation history
       {
         agent: 'user',
         role: 'user',
@@ -200,6 +241,9 @@ export async function runSupportSwarm(
   let steps = 0;
   let category: string | undefined;
   let requiresHuman = false;
+
+  // Keep original query for context
+  const originalQuery = query;
 
   while (steps < maxSteps) {
     const agent = supportAgents[context.currentAgent];
@@ -253,7 +297,7 @@ export async function runSupportSwarm(
         timestamp: new Date()
       });
 
-      // Update query with handoff context
+      // Use handoff context for next agent, but preserve original query in messages
       query = result.handoff.context;
     } else {
       // No handoff = task complete
@@ -291,6 +335,7 @@ export async function* streamSupportSwarm(
       plan?: string;
       accountAge?: number;
     };
+    context?: string;
     pastTickets?: Array<{
       subject: string;
       category: string;
@@ -305,8 +350,44 @@ export async function* streamSupportSwarm(
   content?: string;
   data?: unknown;
 }> {
+  // Parse previous messages from context (same logic as runSupportSwarm)
+  const previousMessages: SupportMessage[] = [];
+
+  if (options.context) {
+    const lines = options.context.split('\n');
+    let inConversation = false;
+
+    for (const line of lines) {
+      if (
+        line.startsWith('Recent conversation:') ||
+        line.startsWith('Previous conversation history:')
+      ) {
+        inConversation = true;
+        continue;
+      }
+      if (line.startsWith('Session facts:') || line.startsWith('User preferences:')) {
+        inConversation = false;
+        continue;
+      }
+
+      if (inConversation && line.trim()) {
+        const match = line.match(/^(user|assistant|[a-z]+):\s*(.+)$/i);
+        if (match) {
+          const [, roleOrAgent, content] = match;
+          previousMessages.push({
+            agent: roleOrAgent === 'user' ? 'user' : roleOrAgent,
+            role: roleOrAgent === 'user' ? 'user' : 'assistant',
+            content: content.trim(),
+            timestamp: new Date()
+          });
+        }
+      }
+    }
+  }
+
   const context: SupportContext = {
     messages: [
+      ...previousMessages, // Include previous conversation history
       {
         agent: 'user',
         role: 'user',

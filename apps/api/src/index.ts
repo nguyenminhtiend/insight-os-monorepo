@@ -16,6 +16,7 @@ import { jobsRoutes } from './routes/jobs.js';
 import { metricsRoutes } from './routes/metrics.js';
 import { supportRoutes } from './routes/support.js';
 import { supportMetricsRoutes } from './routes/support-metrics.js';
+
 import { closeDatabaseConnection } from './db/index.js';
 import { closeRedisConnection } from './lib/redis.js';
 import { flushTraces } from './lib/observability.js';
@@ -30,8 +31,8 @@ app.use(
   '*',
   cors({
     origin: ['http://localhost:3000'],
-    credentials: true
-  })
+    credentials: true,
+  }),
 );
 
 // Routes
@@ -92,8 +93,8 @@ app.get('/', (c) => {
       supportCustomer: '/support/customers/:id',
       supportKnowledgeIngest: '/support/knowledge/ingest',
       supportKnowledge: '/support/knowledge',
-      supportTickets: '/support/tickets'
-    }
+      supportTickets: '/support/tickets',
+    },
   });
 });
 
@@ -103,17 +104,13 @@ console.log(`🚀 InsightOS API running on http://localhost:${port}`);
 
 const server = serve({
   fetch: app.fetch,
-  port
+  port,
 });
 
 // Graceful shutdown
 async function shutdown() {
   console.log('\n🛑 Shutting down...');
-  await Promise.all([
-    closeDatabaseConnection(),
-    closeRedisConnection(),
-    flushTraces()
-  ]);
+  await Promise.all([closeDatabaseConnection(), closeRedisConnection(), flushTraces()]);
   process.exit(0);
 }
 

@@ -14,6 +14,12 @@ export const supportRoutes = new Hono();
 /**
  * POST /support/chat
  * Main support chat endpoint
+ *
+ * Flow:
+ * 1. Validate input and load customer
+ * 2. Load previous conversation history (before adding current message)
+ * 3. Process message with support swarm
+ * 4. Save both user message and assistant response after processing
  */
 supportRoutes.post('/chat', async (c) => {
   try {
@@ -22,15 +28,14 @@ supportRoutes.post('/chat', async (c) => {
       message: string;
       conversationId?: string;
     }>();
-
+    console.log('conversationId', conversationId);
     if (!customerId || !message) {
       return c.json(createErrorResponse('customerId and message are required'), 400);
     }
 
     const trace = createTrace('support_chat', { customerId, conversationId });
-    const contextSpan = createSpan(trace, 'load_context', { customerId });
 
-    // Load customer data
+    // 1. Load customer data
     const [customer] = await db
       .select()
       .from(customers)
@@ -41,25 +46,34 @@ supportRoutes.post('/chat', async (c) => {
       return c.json(createErrorResponse('Customer not found'), 404);
     }
 
-    // Load memory
-    const memory = new MemoryManager(customerId, conversationId || `support_${Date.now()}`);
-    await memory.addMessage('user', message);
-    const context = await memory.getContext();
+    // 2. Initialize memory manager
+    // Use provided conversationId or generate stable one for this customer's first message
+    const sessionId = conversationId || `support_${customerId}_${Date.now()}`;
+    const memory = new MemoryManager(customerId, sessionId);
 
-    // Get DB conversation ID for linking tickets
-    const dbConversationId = await memory.getConversationId();
+    // 3. Load context BEFORE adding current message
+    // This gets previous conversation history only
+    const contextSpan = createSpan(trace, 'load_context', { customerId });
+    const [previousContext, dbConversationId, pastTickets] = await Promise.all([
+      memory.getContext(),
+      memory.getConversationId(),
+      db
+        .select()
+        .from(tickets)
+        .where(eq(tickets.customerId, customerId))
+        .orderBy(desc(tickets.createdAt))
+        .limit(5)
+    ]);
 
-    // Get past tickets
-    const pastTickets = await db
-      .select()
-      .from(tickets)
-      .where(eq(tickets.customerId, customerId))
-      .orderBy(desc(tickets.createdAt))
-      .limit(5);
+    contextSpan.end({
+      output: {
+        customerPlan: customer.plan,
+        ticketCount: pastTickets.length,
+        hasHistory: previousContext.length > 0
+      }
+    });
 
-    contextSpan.end({ output: { customerPlan: customer.plan, ticketCount: pastTickets.length } });
-
-    // Run support swarm
+    // 4. Process message with support swarm
     const swarmSpan = createSpan(trace, 'support_swarm', { message });
 
     const result = await runSupportSwarm(message, {
@@ -70,7 +84,7 @@ supportRoutes.post('/chat', async (c) => {
         plan: customer.plan || undefined,
         accountAge: customer.accountAge || undefined
       },
-      context,
+      context: previousContext,
       pastTickets: pastTickets.map((t) => ({
         subject: t.subject,
         category: t.category || 'general',
@@ -88,10 +102,13 @@ supportRoutes.post('/chat', async (c) => {
       }
     });
 
-    // Update memory (user message already added, just add assistant response)
-    await memory.addMessage('assistant', result.response);
+    // 5. Save conversation to database (both user message and assistant response)
+    await Promise.all([
+      memory.addMessage('user', message),
+      memory.addMessage('assistant', result.response)
+    ]);
 
-    // Update customer ticket count
+    // 6. Update customer metrics if needed
     if (result.category) {
       await db
         .update(customers)
@@ -110,6 +127,7 @@ supportRoutes.post('/chat', async (c) => {
     return c.json(
       createResponse({
         response: result.response,
+        conversationId: sessionId, // Return conversationId for client to use in follow-ups
         agentsUsed: result.agentsUsed,
         category: result.category,
         resolved: result.resolved,
@@ -125,6 +143,11 @@ supportRoutes.post('/chat', async (c) => {
 /**
  * POST /support/chat/stream
  * Streaming support chat
+ *
+ * Flow:
+ * 1. Load previous history before processing
+ * 2. Stream agent responses
+ * 3. Save both messages after stream completes
  */
 supportRoutes.post('/chat/stream', async (c) => {
   try {
@@ -138,7 +161,7 @@ supportRoutes.post('/chat/stream', async (c) => {
       return c.json(createErrorResponse('customerId and message are required'), 400);
     }
 
-    // Load customer data
+    // 1. Load customer data
     const [customer] = await db
       .select()
       .from(customers)
@@ -149,21 +172,19 @@ supportRoutes.post('/chat/stream', async (c) => {
       return c.json(createErrorResponse('Customer not found'), 404);
     }
 
-    // Load memory
-    const memory = new MemoryManager(customerId, conversationId || `support_${Date.now()}`);
-    await memory.addMessage('user', message);
-    const context = await memory.getContext();
+    // 2. Initialize memory and load previous context
+    const sessionId = conversationId || `support_${customerId}_${Date.now()}`;
+    const memory = new MemoryManager(customerId, sessionId);
 
-    // Get DB conversation ID for linking tickets
-    const dbConversationId = await memory.getConversationId();
-
-    // Get past tickets
-    const pastTickets = await db
-      .select()
-      .from(tickets)
-      .where(eq(tickets.customerId, customerId))
-      .orderBy(desc(tickets.createdAt))
-      .limit(5);
+    const [previousContext, pastTickets] = await Promise.all([
+      memory.getContext(),
+      db
+        .select()
+        .from(tickets)
+        .where(eq(tickets.customerId, customerId))
+        .orderBy(desc(tickets.createdAt))
+        .limit(5)
+    ]);
 
     c.header('Content-Type', 'text/event-stream');
     c.header('Cache-Control', 'no-cache');
@@ -178,6 +199,7 @@ supportRoutes.post('/chat/stream', async (c) => {
           plan: customer.plan || undefined,
           accountAge: customer.accountAge || undefined
         },
+        context: previousContext,
         pastTickets: pastTickets.map((t) => ({
           subject: t.subject,
           category: t.category || 'general',
@@ -196,9 +218,12 @@ supportRoutes.post('/chat/stream', async (c) => {
 
       await stream.write('data: [DONE]\n\n');
 
-      // Save assistant response to memory
+      // Save both user message and assistant response after stream completes
       if (fullResponse) {
-        await memory.addMessage('assistant', fullResponse);
+        await Promise.all([
+          memory.addMessage('user', message),
+          memory.addMessage('assistant', fullResponse)
+        ]);
       }
     });
   } catch (error) {

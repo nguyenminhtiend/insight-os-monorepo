@@ -41,6 +41,7 @@ export default function SupportChatPage() {
   const [customerId, setCustomerId] = useState('demo_customer');
   const [customerInfo, setCustomerInfo] = useState<Customer | null>(null);
   const [result, setResult] = useState<any>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -78,12 +79,12 @@ export default function SupportChatPage() {
   };
 
   const quickQueries = [
-    { text: "I forgot my password, how do I reset it?", category: 'account' },
-    { text: "When is my next payment and how much will it be?", category: 'billing' },
-    { text: "I was accidentally charged $25. Can I get a refund?", category: 'billing' },
-    { text: "What are the API rate limits on my plan?", category: 'technical' },
-    { text: "I need a refund of $200", category: 'billing' },
-    { text: "This is taking too long! I want to speak to a manager!", category: 'escalation' }
+    { text: 'I forgot my password, how do I reset it?', category: 'account' },
+    { text: 'When is my next payment and how much will it be?', category: 'billing' },
+    { text: 'I was accidentally charged $25. Can I get a refund?', category: 'billing' },
+    { text: 'What are the API rate limits on my plan?', category: 'technical' },
+    { text: 'I need a refund of $200', category: 'billing' },
+    { text: 'This is taking too long! I want to speak to a manager!', category: 'escalation' }
   ];
 
   const sendMessage = async (messageText?: string) => {
@@ -109,13 +110,20 @@ export default function SupportChatPage() {
         body: JSON.stringify({
           customerId,
           message: textToSend,
-          conversationId: `chat_${customerId}_${Date.now()}`
+          // Use existing conversationId if available, otherwise let server generate one
+          ...(conversationId && { conversationId })
         })
       });
 
       const data = await response.json();
 
       if (data.success) {
+        // Save conversationId from first response for subsequent messages
+        if (!conversationId && data.data.conversationId) {
+          setConversationId(data.data.conversationId);
+          console.log('Started new conversation:', data.data.conversationId);
+        }
+
         const assistantMessage: Message = {
           role: 'assistant',
           content: data.data.response,
@@ -144,6 +152,14 @@ export default function SupportChatPage() {
     sendMessage(query);
   };
 
+  const clearConversation = () => {
+    setMessages([]);
+    setConversationId(null);
+    setResult(null);
+    setAgentStatus('');
+    console.log('Conversation cleared - starting fresh');
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -158,14 +174,31 @@ export default function SupportChatPage() {
               </Link>
               <div>
                 <h1 className="text-2xl font-bold">💬 Support Chat</h1>
-                <p className="text-sm text-muted-foreground">AI-powered customer support</p>
+                <p className="text-sm text-muted-foreground">
+                  AI-powered customer support
+                  {conversationId && (
+                    <span className="ml-2 text-xs text-blue-600">• Active conversation</span>
+                  )}
+                </p>
               </div>
             </div>
             {customerInfo && (
-              <div className="text-right">
-                <div className="text-sm font-medium">{customerInfo.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  {customerInfo.email} • {customerInfo.plan} plan
+              <div className="flex items-center gap-4">
+                {messages.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearConversation}
+                    disabled={loading}
+                  >
+                    Clear Chat
+                  </Button>
+                )}
+                <div className="text-right">
+                  <div className="text-sm font-medium">{customerInfo.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {customerInfo.email} • {customerInfo.plan} plan
+                  </div>
                 </div>
               </div>
             )}
@@ -202,7 +235,9 @@ export default function SupportChatPage() {
                   {messages.map((message, idx) => (
                     <div
                       key={idx}
-                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      className={`flex ${
+                        message.role === 'user' ? 'justify-end' : 'justify-start'
+                      }`}
                     >
                       <div className="flex gap-3 max-w-[80%]">
                         {message.role === 'assistant' && (
@@ -262,7 +297,11 @@ export default function SupportChatPage() {
                       disabled={loading}
                       className="min-h-[60px] flex-1"
                     />
-                    <Button onClick={() => sendMessage()} disabled={loading || !input.trim()} size="icon">
+                    <Button
+                      onClick={() => sendMessage()}
+                      disabled={loading || !input.trim()}
+                      size="icon"
+                    >
                       {loading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
@@ -301,17 +340,26 @@ export default function SupportChatPage() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Status</p>
                       {result.resolved ? (
-                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+                        <Badge
+                          variant="outline"
+                          className="bg-green-500/10 text-green-600 border-green-500/20"
+                        >
                           <CheckCircle2 className="h-3 w-3 mr-1" />
                           Resolved
                         </Badge>
                       ) : result.requiresHuman ? (
-                        <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/20">
+                        <Badge
+                          variant="outline"
+                          className="bg-orange-500/10 text-orange-600 border-orange-500/20"
+                        >
                           <AlertCircle className="h-3 w-3 mr-1" />
                           Escalated
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-500/10 text-blue-600 border-blue-500/20"
+                        >
                           <Clock className="h-3 w-3 mr-1" />
                           Pending
                         </Badge>

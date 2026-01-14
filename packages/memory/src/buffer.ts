@@ -1,4 +1,21 @@
 /**
+ * @deprecated BufferMemory is NOT suitable for production use in stateless HTTP APIs
+ *
+ * PROBLEMS:
+ * - In-memory storage that's per-process and doesn't persist across requests
+ * - Each HTTP request creates a new MemoryManager instance with empty buffer
+ * - Breaks in load-balanced/multi-server deployments (state not shared)
+ * - Provides zero value in stateless architectures
+ *
+ * USE INSTEAD:
+ * - PostgreSQL: Primary storage for all messages (works across all servers)
+ * - Redis: Optional cache for hot data (shared across servers)
+ *
+ * This file kept for backward compatibility but should NOT be used.
+ * MemoryManager no longer instantiates BufferMemory.
+ */
+
+/**
  * Short-term buffer memory (in-memory, per-request)
  */
 export class BufferMemory {
@@ -42,4 +59,3 @@ export class BufferMemory {
     return this.messages.map((m) => `${m.role}: ${m.content}`).join('\n');
   }
 }
-
