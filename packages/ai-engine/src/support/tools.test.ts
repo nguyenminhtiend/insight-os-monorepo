@@ -10,8 +10,8 @@ vi.mock('../hitl/approval.js', () => ({
     description: 'Mock approval',
     riskLevel: 'high',
     payload: {},
-    createdAt: new Date(),
-  }),
+    createdAt: new Date()
+  })
 }));
 
 vi.mock('@insight-os/db-schema', () => ({
@@ -26,13 +26,13 @@ vi.mock('@insight-os/db-schema', () => ({
             category: 'technical',
             priority: 'medium',
             status: 'open',
-            createdAt: new Date(),
-          },
-        ]),
-      }),
-    }),
+            createdAt: new Date()
+          }
+        ])
+      })
+    })
   },
-  tickets: {},
+  tickets: {}
 }));
 
 import { requestApproval } from '../hitl/approval.js';
@@ -50,7 +50,7 @@ describe('Support Tools', () => {
       const result = await requestRefund.execute({
         customerId: 'cust_123',
         amount: 25,
-        reason: 'Product defect',
+        reason: 'Product defect'
       });
 
       expect(result.approved).toBe(true);
@@ -66,7 +66,7 @@ describe('Support Tools', () => {
       const result = await requestRefund.execute({
         customerId: 'cust_456',
         amount: 50,
-        reason: 'Service issue',
+        reason: 'Service issue'
       });
 
       expect(result.approved).toBe(true);
@@ -80,7 +80,7 @@ describe('Support Tools', () => {
       const result = await requestRefund.execute({
         customerId: 'cust_789',
         amount: 100,
-        reason: 'Major service failure',
+        reason: 'Major service failure'
       });
 
       expect(result.approved).toBe(false);
@@ -102,7 +102,7 @@ describe('Support Tools', () => {
         customerId: 'cust_abc',
         amount: 200,
         reason: 'Double charged',
-        transactionId: 'txn_12345',
+        transactionId: 'txn_12345'
       });
 
       expect(requestApproval).toHaveBeenCalledWith(
@@ -122,7 +122,7 @@ describe('Support Tools', () => {
       const result = await offerCompensation.execute({
         customerId: 'cust_123',
         amount: 15,
-        reason: 'Service delay apology',
+        reason: 'Service delay apology'
       });
 
       expect(result.approved).toBe(true);
@@ -137,7 +137,7 @@ describe('Support Tools', () => {
       const result = await offerCompensation.execute({
         customerId: 'cust_456',
         amount: 25,
-        reason: 'Minor inconvenience',
+        reason: 'Minor inconvenience'
       });
 
       expect(result.approved).toBe(true);
@@ -150,7 +150,7 @@ describe('Support Tools', () => {
       const result = await offerCompensation.execute({
         customerId: 'cust_789',
         amount: 50,
-        reason: 'Significant service outage',
+        reason: 'Significant service outage'
       });
 
       expect(result.approved).toBe(false);
@@ -174,7 +174,7 @@ describe('Support Tools', () => {
         subject: 'Production down',
         summary: 'All APIs returning 500',
         priority: 'urgent',
-        category: 'technical',
+        category: 'technical'
       });
 
       expect(result.ticketId).toMatch(/^TKT-/);
@@ -190,7 +190,7 @@ describe('Support Tools', () => {
         subject: 'Billing discrepancy',
         summary: 'Overcharged $500',
         priority: 'high',
-        category: 'billing',
+        category: 'billing'
       });
 
       expect(result.priority).toBe('high');
@@ -206,7 +206,7 @@ describe('Support Tools', () => {
         customerId: 'cust_angry',
         urgency: 'critical',
         message: 'Customer threatening legal action',
-        context: { previousAttempts: 3 },
+        context: { previousAttempts: 3 }
       });
 
       expect(result.notified).toBe(true);
@@ -222,7 +222,7 @@ describe('Support Tools', () => {
       const { getBillingHistory } = await import('./tools.js');
 
       const result = await getBillingHistory.execute({
-        customerId: 'cust_123',
+        customerId: 'cust_123'
       });
 
       expect(result.customerId).toBe('cust_123');
@@ -236,7 +236,7 @@ describe('Support Tools', () => {
 
       const result = await getBillingHistory.execute({
         customerId: 'cust_123',
-        limit: 5,
+        limit: 5
       });
 
       expect(result.customerId).toBe('cust_123');
@@ -248,7 +248,7 @@ describe('Support Tools', () => {
       const { getSubscription } = await import('./tools.js');
 
       const result = await getSubscription.execute({
-        customerId: 'cust_pro',
+        customerId: 'cust_pro'
       });
 
       expect(result.customerId).toBe('cust_pro');
@@ -265,7 +265,7 @@ describe('Support Tools', () => {
 
       const result = await checkFeatureAccess.execute({
         customerId: 'cust_123',
-        feature: 'api_access',
+        feature: 'api_access'
       });
 
       expect(result.hasAccess).toBe(true);
@@ -279,7 +279,7 @@ describe('Support Tools', () => {
 
       const result = await checkFeatureAccess.execute({
         customerId: 'cust_123',
-        feature: 'sso',
+        feature: 'sso'
       });
 
       expect(result.hasAccess).toBe(false);
@@ -293,7 +293,7 @@ describe('Support Tools', () => {
 
       const result = await sendPasswordReset.execute({
         customerId: 'cust_123',
-        email: 'user@example.com',
+        email: 'user@example.com'
       });
 
       expect(result.sent).toBe(true);
@@ -307,7 +307,7 @@ describe('Support Tools', () => {
       const { checkPermissions } = await import('./tools.js');
 
       const result = await checkPermissions.execute({
-        customerId: 'cust_admin',
+        customerId: 'cust_admin'
       });
 
       expect(result.customerId).toBe('cust_admin');
@@ -322,7 +322,7 @@ describe('Support Tools', () => {
       const { ragSearch } = await import('./tools.js');
 
       const result = await ragSearch.execute({
-        query: 'how to reset password',
+        query: 'how to reset password'
       });
 
       expect(result.query).toBe('how to reset password');
@@ -336,7 +336,7 @@ describe('Support Tools', () => {
 
       const result = await ragSearch.execute({
         query: 'api authentication',
-        category: 'documentation',
+        category: 'documentation'
       });
 
       expect(result.query).toBe('api authentication');

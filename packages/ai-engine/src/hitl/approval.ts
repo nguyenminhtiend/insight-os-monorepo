@@ -23,7 +23,7 @@ export async function requestApproval(
   action: string,
   description: string,
   payload: Record<string, unknown>,
-  riskLevel: 'low' | 'medium' | 'high' = 'medium',
+  riskLevel: 'low' | 'medium' | 'high' = 'medium'
 ): Promise<ApprovalRequest> {
   const request: ApprovalRequest = {
     id: `apr_${Date.now()}_${Math.random().toString(36).slice(2)}`,
@@ -33,7 +33,7 @@ export async function requestApproval(
     riskLevel,
     payload,
     status: 'pending',
-    createdAt: new Date(),
+    createdAt: new Date()
   };
 
   approvalRequests.set(request.id, request);
@@ -63,7 +63,7 @@ export function needsApproval(action: string, riskLevel: 'low' | 'medium' | 'hig
     'purchase',
     'pay',
     'transfer', // Financial
-    'AI',
+    'AI'
   ];
 
   // Medium risk: Mutation, External interaction -> Requires approval (unless manually set to low risk)
@@ -80,7 +80,7 @@ export function needsApproval(action: string, riskLevel: 'low' | 'medium' | 'hig
     'auth', // Identity
     'api',
     'request',
-    'fetch', // External Data
+    'fetch' // External Data
   ];
 
   if (highRiskKeywords.some((keyword) => normalizedAction.includes(keyword))) return true;
@@ -101,7 +101,7 @@ export async function resolveApproval(
   requestId: string,
   approved: boolean,
   resolvedBy: string,
-  feedback?: string,
+  feedback?: string
 ): Promise<ApprovalRequest | null> {
   const request = approvalRequests.get(requestId);
   if (!request) return null;
@@ -135,7 +135,7 @@ export function getPendingApprovals(workflowId?: string): ApprovalRequest[] {
  */
 export async function waitForApproval(
   requestId: string,
-  timeoutMs: number = 300000, // 5 minutes
+  timeoutMs: number = 300000 // 5 minutes
 ): Promise<ApprovalRequest> {
   const startTime = Date.now();
 
@@ -151,5 +151,3 @@ export async function waitForApproval(
 
   throw new Error(`Approval timeout for request ${requestId}`);
 }
-
-

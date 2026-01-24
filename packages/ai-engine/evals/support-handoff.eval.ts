@@ -36,79 +36,7 @@ interface EvalResult {
   };
 }
 
-// Mock runSupportSwarm for evaluation
-// In production, this would import the actual function
-async function runSupportSwarm(
-  query: string,
-  options: {
-    customer: { id: string; plan?: string; accountAge?: number };
-  },
-  _maxSteps?: number
-): Promise<{
-  agentsUsed: string[];
-  category?: string;
-  resolved: boolean;
-  requiresHuman: boolean;
-  response: string;
-}> {
-  // Mock implementation for eval demonstration
-  // In real usage, import from '../src/support/orchestrator.js'
-
-  // Simple routing logic for demonstration
-  const lowerQuery = query.toLowerCase();
-
-  if (lowerQuery.includes('ridiculous') || lowerQuery.includes('sue') || lowerQuery.includes('week')) {
-    return {
-      agentsUsed: ['triage', 'escalation'],
-      category: 'escalation',
-      resolved: false,
-      requiresHuman: true,
-      response: 'Escalating to human agent...',
-    };
-  }
-
-  if (lowerQuery.includes('password') || lowerQuery.includes('log in') || lowerQuery.includes('team')) {
-    return {
-      agentsUsed: ['triage', 'account'],
-      category: 'account',
-      resolved: true,
-      requiresHuman: false,
-      response: 'Account support response',
-    };
-  }
-
-  if (lowerQuery.includes('charge') || lowerQuery.includes('refund') || lowerQuery.includes('cancel') || lowerQuery.includes('subscription')) {
-    const amount = query.match(/\$(\d+)/)?.[1];
-    const requiresApproval = amount && parseInt(amount) > 50;
-
-    return {
-      agentsUsed: ['triage', 'billing'],
-      category: 'billing',
-      resolved: !requiresApproval,
-      requiresHuman: !!requiresApproval,
-      response: 'Billing support response',
-    };
-  }
-
-  if (lowerQuery.includes('api') || lowerQuery.includes('error') || lowerQuery.includes('slow') || lowerQuery.includes('404')) {
-    return {
-      agentsUsed: ['triage', 'technical'],
-      category: 'technical',
-      resolved: true,
-      requiresHuman: false,
-      response: 'Technical support response',
-    };
-  }
-
-  // Default to triage for simple/info queries
-  return {
-    agentsUsed: ['triage'],
-    category: 'general',
-    resolved: true,
-    requiresHuman: false,
-    response: 'General response',
-  };
-}
+import { runSupportSwarm } from '../src/support/orchestrator.js';
 
 async function evaluateCase(tc: EvalCase): Promise<EvalResult> {
   const result = await runSupportSwarm(
@@ -120,22 +48,21 @@ async function evaluateCase(tc: EvalCase): Promise<EvalResult> {
         accountAge: tc.customer?.accountAge || 100,
       },
     },
-    5
+    5,
   );
 
   // Check agent routing
   const agentMatch = tc.expectedAgent
     ? result.agentsUsed.includes(tc.expectedAgent)
     : tc.expectedHandoffs
-      ? tc.expectedHandoffs.every((agent, i) => result.agentsUsed[i] === agent)
-      : true;
+    ? tc.expectedHandoffs.every((agent, i) => result.agentsUsed[i] === agent)
+    : true;
 
   // Check category
   const categoryMatch = !tc.expectedCategory || result.category === tc.expectedCategory;
 
   // Check resolution status
-  const resolutionMatch =
-    tc.shouldResolve === undefined || result.resolved === tc.shouldResolve;
+  const resolutionMatch = tc.shouldResolve === undefined || result.resolved === tc.shouldResolve;
 
   const passed = agentMatch && categoryMatch && resolutionMatch;
 
@@ -143,7 +70,9 @@ async function evaluateCase(tc: EvalCase): Promise<EvalResult> {
     caseId: tc.id,
     input: tc.input.slice(0, 50) + (tc.input.length > 50 ? '...' : ''),
     passed,
-    details: `Agents: [${result.agentsUsed.join(' → ')}], Category: ${result.category}, Resolved: ${result.resolved}`,
+    details: `Agents: [${result.agentsUsed.join(' → ')}], Category: ${result.category}, Resolved: ${
+      result.resolved
+    }`,
     metrics: {
       agentMatch,
       categoryMatch,
@@ -155,7 +84,7 @@ async function evaluateCase(tc: EvalCase): Promise<EvalResult> {
 
 async function runEvals() {
   console.log('🔬 Running Support Swarm Handoff Evaluations\n');
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
 
   const results: EvalResult[] = [];
   const cases = supportCases.cases as EvalCase[];
@@ -172,7 +101,7 @@ async function runEvals() {
   }
 
   // Summary statistics
-  console.log('\n' + '=' .repeat(60));
+  console.log('\n' + '='.repeat(60));
   console.log('📊 Summary\n');
 
   const passed = results.filter((r) => r.passed).length;
@@ -182,18 +111,15 @@ async function runEvals() {
   console.log(`Pass Rate: ${passed}/${total} (${passRate.toFixed(1)}%)`);
 
   // Category breakdown
-  const byCategory = results.reduce(
-    (acc, r) => {
-      const tags = cases.find((c) => c.id === r.caseId)?.tags || ['other'];
-      tags.forEach((tag) => {
-        if (!acc[tag]) acc[tag] = { passed: 0, total: 0 };
-        acc[tag].total++;
-        if (r.passed) acc[tag].passed++;
-      });
-      return acc;
-    },
-    {} as Record<string, { passed: number; total: number }>
-  );
+  const byCategory = results.reduce((acc, r) => {
+    const tags = cases.find((c) => c.id === r.caseId)?.tags || ['other'];
+    tags.forEach((tag) => {
+      if (!acc[tag]) acc[tag] = { passed: 0, total: 0 };
+      acc[tag].total++;
+      if (r.passed) acc[tag].passed++;
+    });
+    return acc;
+  }, {} as Record<string, { passed: number; total: number }>);
 
   console.log('\nBy Category:');
   Object.entries(byCategory)
